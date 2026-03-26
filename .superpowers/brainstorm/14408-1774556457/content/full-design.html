@@ -1,0 +1,105 @@
+<h2>التصميم الكامل — مُعلِّم اللغات الاحترافي</h2>
+<p class="subtitle">Next.js + Supabase + OpenRouter مع أنظمة التعلم الأربعة</p>
+
+<div class="section">
+  <h3>🏗️ المعمارية المحدّثة</h3>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;font-size:11px;">
+    <div style="background:#1e1e2e;border-radius:8px;padding:10px;border-left:3px solid #cba6f7;">
+      <span style="color:#cba6f7;font-weight:bold;">Frontend (Next.js App Router)</span>
+      <span style="color:#6c7086;margin:0 8px;">→</span>
+      <span style="color:#cdd6f4;">API Routes</span>
+      <span style="color:#6c7086;margin:0 8px;">→</span>
+      <span style="color:#a6e3a1;font-weight:bold;">OpenRouter API</span>
+      <span style="color:#6c7086;margin:0 4px;">(أي نموذج)</span>
+      <span style="color:#6c7086;margin:0 8px">+</span>
+      <span style="color:#f38ba8;font-weight:bold;">Supabase</span>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:14px;">
+  <h3>🧠 أنظمة التعلم الأربعة</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+
+    <div style="background:#1e1e2e;border-radius:8px;padding:12px;border-top:2px solid #cba6f7;">
+      <div style="color:#cba6f7;font-weight:bold;font-size:12px;margin-bottom:8px;">1. SRS — تكرار متباعد</div>
+      <div style="font-size:10px;color:#bac2de;line-height:1.7;">
+        • كل مفردة جديدة تُضاف لبطاقة SRS<br>
+        • خوارزمية SM-2 تحدد موعد المراجعة<br>
+        • قسم مراجعة يومية منفصل عن المحادثة<br>
+        • تتبع: سهل / صعب / نسيت لكل بطاقة
+      </div>
+    </div>
+
+    <div style="background:#1e1e2e;border-radius:8px;padding:12px;border-top:2px solid #89b4fa;">
+      <div style="color:#89b4fa;font-weight:bold;font-size:12px;margin-bottom:8px;">2. CEFR (A1 → C2)</div>
+      <div style="font-size:10px;color:#bac2de;line-height:1.7;">
+        • تحديد المستوى تلقائياً عند بدء المحادثة<br>
+        • prompt النظام يتغير حسب المستوى<br>
+        • تتبع: معدل الأخطاء، تنوع المفردات<br>
+        • شريط تقدم مرئي A1→A2→B1→B2→C1→C2
+      </div>
+    </div>
+
+    <div style="background:#1e1e2e;border-radius:8px;padding:12px;border-top:2px solid #a6e3a1;">
+      <div style="color:#a6e3a1;font-weight:bold;font-size:12px;margin-bottom:8px;">3. Input +1 (كراشن)</div>
+      <div style="font-size:10px;color:#bac2de;line-height:1.7;">
+        • المعلم يستخدم 80% مفردات مألوفة + 20% جديدة<br>
+        • يكتشف الكلمات الجديدة ويشرحها في السياق<br>
+        • Claude prompt يتضمن قائمة المفردات المعروفة<br>
+        • لا مفردات صعبة جداً ولا سهلة جداً
+      </div>
+    </div>
+
+    <div style="background:#1e1e2e;border-radius:8px;padding:12px;border-top:2px solid #fab387;">
+      <div style="color:#fab387;font-weight:bold;font-size:12px;margin-bottom:8px;">4. Gamification</div>
+      <div style="font-size:10px;color:#bac2de;line-height:1.7;">
+        • XP نقاط لكل رسالة صحيحة / مراجعة SRS<br>
+        • Streak يومي مع تنبيه إذا انكسر<br>
+        • شارات: "أول جلسة"، "7 أيام متواصلة"، إلخ<br>
+        • مستويات: مبتدئ → متوسط → متقدم → خبير
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:14px;">
+  <h3>🗄️ جداول Supabase</h3>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;font-size:10px;">
+    <div style="background:#181825;border-radius:6px;padding:8px;">
+      <div style="color:#cba6f7;font-weight:bold;margin-bottom:4px;">sessions</div>
+      <div style="color:#6c7086;">language, cefr_level<br>total_xp, streak_days<br>started_at, ended_at</div>
+    </div>
+    <div style="background:#181825;border-radius:6px;padding:8px;">
+      <div style="color:#89b4fa;font-weight:bold;margin-bottom:4px;">messages</div>
+      <div style="color:#6c7086;">session_id, role<br>content, language<br>xp_earned, created_at</div>
+    </div>
+    <div style="background:#181825;border-radius:6px;padding:8px;">
+      <div style="color:#a6e3a1;font-weight:bold;margin-bottom:4px;">vocab_cards (SRS)</div>
+      <div style="color:#6c7086;">word, translation<br>ease_factor, interval<br>next_review, repetitions</div>
+    </div>
+    <div style="background:#181825;border-radius:6px;padding:8px;">
+      <div style="color:#fab387;font-weight:bold;margin-bottom:4px;">feedback_log</div>
+      <div style="color:#6c7086;">message_id, type<br>original, correction<br>explanation</div>
+    </div>
+    <div style="background:#181825;border-radius:6px;padding:8px;">
+      <div style="color:#f38ba8;font-weight:bold;margin-bottom:4px;">goals</div>
+      <div style="color:#6c7086;">language, title<br>target_date, progress<br>is_auto, completed</div>
+    </div>
+    <div style="background:#181825;border-radius:6px;padding:8px;">
+      <div style="color:#89dceb;font-weight:bold;margin-bottom:4px;">achievements</div>
+      <div style="color:#6c7086;">badge_id, earned_at<br>xp_reward</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:14px;">
+  <h3>📱 صفحات التطبيق</h3>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">
+    <span style="background:#313244;border-radius:6px;padding:6px 10px;color:#cba6f7;font-size:11px;">/chat — المحادثة الرئيسية</span>
+    <span style="background:#313244;border-radius:6px;padding:6px 10px;color:#89b4fa;font-size:11px;">/review — مراجعة SRS اليومية</span>
+    <span style="background:#313244;border-radius:6px;padding:6px 10px;color:#a6e3a1;font-size:11px;">/dashboard — التقدم والإحصائيات</span>
+    <span style="background:#313244;border-radius:6px;padding:6px 10px;color:#fab387;font-size:11px;">/goals — الأهداف</span>
+    <span style="background:#313244;border-radius:6px;padding:6px 10px;color:#f38ba8;font-size:11px;">/history — سجل الجلسات</span>
+  </div>
+</div>

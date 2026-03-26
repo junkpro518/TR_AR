@@ -1,0 +1,68 @@
+<h2>تصميم المعمارية — المقاربة A</h2>
+<p class="subtitle">Next.js + Supabase + Claude API</p>
+
+<div class="section">
+  <h3>طبقات التطبيق</h3>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;">
+
+    <div style="background:#1e1e2e;border-radius:8px;padding:12px;border-left:3px solid #cba6f7;">
+      <div style="color:#cba6f7;font-weight:bold;margin-bottom:6px;font-size:13px;">🖥️ Frontend — Next.js (App Router)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">صفحة المحادثة /chat</span>
+        <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">لوحة التقدم /dashboard</span>
+        <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">إعدادات الأهداف /goals</span>
+        <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">سجل الجلسات /history</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;color:#6c7086;font-size:12px;">↕ API Routes (Next.js Server)</div>
+
+    <div style="background:#1e1e2e;border-radius:8px;padding:12px;border-left:3px solid #89b4fa;">
+      <div style="color:#89b4fa;font-weight:bold;margin-bottom:6px;font-size:13px;">⚙️ API Layer — Next.js API Routes</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">POST /api/chat — إرسال رسالة لـ Claude</span>
+        <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">POST /api/feedback — تحليل لغوي</span>
+        <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">GET /api/session — جلب/حفظ جلسة</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <div style="flex:1;background:#1e1e2e;border-radius:8px;padding:12px;border-left:3px solid #a6e3a1;">
+        <div style="color:#a6e3a1;font-weight:bold;margin-bottom:6px;font-size:13px;">🤖 Claude API</div>
+        <div style="color:#bac2de;font-size:11px;">نموذجان منفصلان:</div>
+        <div style="margin-top:4px;display:flex;flex-direction:column;gap:4px;">
+          <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">claude-sonnet-4-6 للمحادثة</span>
+          <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">claude-haiku-4-5 للتحليل السريع</span>
+        </div>
+      </div>
+      <div style="flex:1;background:#1e1e2e;border-radius:8px;padding:12px;border-left:3px solid #f38ba8;">
+        <div style="color:#f38ba8;font-weight:bold;margin-bottom:6px;font-size:13px;">🗄️ Supabase</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">Auth (بدون تسجيل — مستخدم واحد)</span>
+          <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">sessions — جلسات المحادثة</span>
+          <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">messages — الرسائل</span>
+          <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">goals — أهداف التعلم</span>
+          <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">feedback_log — سجل الأخطاء</span>
+          <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">vocab_progress — نمو المفردات</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#1e1e2e;border-radius:8px;padding:12px;border-left:3px solid #fab387;">
+      <div style="color:#fab387;font-weight:bold;margin-bottom:6px;font-size:13px;">🚀 النشر</div>
+      <div style="display:flex;gap:6px;">
+        <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">Vercel — Frontend + API</span>
+        <span style="background:#313244;border-radius:4px;padding:3px 8px;color:#cdd6f4;font-size:11px;">Supabase Cloud — DB</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px;">
+  <h3>تدفق الرسالة الواحدة</h3>
+  <div style="background:#181825;border-radius:8px;padding:12px;font-size:11px;color:#cdd6f4;line-height:1.8;">
+    المستخدم يكتب → <span style="color:#89b4fa">POST /api/chat</span> → <span style="color:#a6e3a1">Claude (محادثة)</span> → رد المعلم<br>
+    في نفس الوقت → <span style="color:#89b4fa">POST /api/feedback</span> → <span style="color:#fab387">Claude Haiku (تحليل)</span> → تغذية راجعة فورية<br>
+    بعد الرد → <span style="color:#f38ba8">Supabase</span> → حفظ الرسالة + الأخطاء + تحديث الإحصائيات
+  </div>
+</div>

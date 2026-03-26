@@ -1,0 +1,47 @@
+<h2>توصياتي الإضافية</h2>
+<p class="subtitle">اختر ما تريد إضافته للمشروع</p>
+
+<div class="options" data-multiselect>
+
+  <div class="option" data-choice="voice" onclick="toggleSelect(this)">
+    <div class="letter">🎙️</div>
+    <div class="content">
+      <h3>الصوت (TTS + STT) — الأهم</h3>
+      <p>تشغيل صوت المعلم بنطق صحيح (TTS) + التحدث بالميكروفون للتدرب على النطق (STT). أساسي جداً لأي تطبيق لغات احترافي. يستخدم Web Speech API مجاناً في المتصفح.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="lessons" onclick="toggleSelect(this)">
+    <div class="letter">📚</div>
+    <div class="content">
+      <h3>وضع الدروس المنظمة</h3>
+      <p>إلى جانب المحادثة الحرة، درس يومي هيكلي: قاعدة نحوية + أمثلة + تمرين. مثلاً "اليوم: تصريف الأفعال المضارعة بالتركية". يكمّل SRS بدل ما يكون مجرد محادثة.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="pwa" onclick="toggleSelect(this)">
+    <div class="letter">📱</div>
+    <div class="content">
+      <h3>PWA — تطبيق على الجوال</h3>
+      <p>تحويل الموقع لـ Progressive Web App يتيح تثبيته على شاشة الجوال كتطبيق أصيل، وعمل مراجعات SRS بدون إنترنت. مهم لأن التعلم اليومي يحدث في الجوال غالباً.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="export" onclick="toggleSelect(this)">
+    <div class="letter">📤</div>
+    <div class="content">
+      <h3>تصدير لـ Anki</h3>
+      <p>تصدير بطاقات المفردات المجمّعة بصيغة .apkg لاستخدامها في Anki. يربط تطبيقك مع أقوى نظام SRS في العالم. بضع سطور كود فقط.</p>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:20px;background:#1e1e2e;border-radius:8px;padding:14px;border-left:3px solid #fab387;">
+  <div style="color:#fab387;font-weight:bold;font-size:12px;margin-bottom:8px;">⚠️ ما لا أنصح بإضافته الآن</div>
+  <div style="font-size:11px;color:#bac2de;line-height:1.8;">
+    <span style="color:#f38ba8;">✗</span> نظام مستخدمين متعدد — الاستخدام الشخصي لا يحتاجه، يزيد التعقيد<br>
+    <span style="color:#f38ba8;">✗</span> تمييز الكلام بالذكاء الاصطناعي (Whisper) — Web Speech API كافية وأسرع<br>
+    <span style="color:#f38ba8;">✗</span> اختبارات CEFR رسمية — تقدير تلقائي من المحادثة أدق وأسهل
+  </div>
+</div>

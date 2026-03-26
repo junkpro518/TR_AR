@@ -1,0 +1,40 @@
+<h2>3 مقاربات معمارية للمشروع</h2>
+<p class="subtitle">اختر النهج الذي يناسب أهدافك</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Next.js Monolith + Supabase (موصى)</h3>
+      <p>تطبيق Next.js كامل مع API Routes للتواصل مع Claude. Supabase للمصادقة وقاعدة البيانات. كل شيء في مستودع واحد.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>المميزات</h4><ul><li>أسرع في التطوير</li><li>نشر بسيط على Vercel</li><li>مناسب جداً للاستخدام الشخصي</li><li>TypeScript من البداية</li></ul></div>
+        <div class="cons"><h4>العيوب</h4><ul><li>API Routes ليست مخصصة لعمليات طويلة</li><li>مفتاح Claude في الـ Server Side</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Next.js + Supabase Edge Functions</h3>
+      <p>Next.js للواجهة فقط. منطق Claude يعمل كـ Edge Functions داخل Supabase. فصل واضح بين الطبقات.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>المميزات</h4><ul><li>فصل ممتاز بين Frontend/Backend</li><li>Edge Functions قريبة من المستخدم</li><li>مفتاح Claude في بيئة آمنة</li></ul></div>
+        <div class="cons"><h4>العيوب</h4><ul><li>تعقيد إضافي في التطوير</li><li>Deno runtime في Edge Functions</li><li>Debug أصعب</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Next.js + Python FastAPI Backend</h3>
+      <p>Next.js للواجهة. Python FastAPI كـ Backend مستقل. مناسب إن كنت تريد تحليلات لغوية متقدمة مستقبلاً.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>المميزات</h4><ul><li>Python قوي في معالجة النصوص</li><li>إمكانية إضافة ML مستقبلاً</li><li>مرونة عالية</li></ul></div>
+        <div class="cons"><h4>العيوب</h4><ul><li>تعقيد عالي لاستخدام شخصي</li><li>خادمين مستقلين للنشر</li><li>وقت تطوير أطول</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
