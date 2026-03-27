@@ -12,7 +12,7 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm mr-2 flex-shrink-0 mt-1">
+        <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm mr-2 flex-shrink-0 mt-1" aria-hidden="true">
           T
         </div>
       )}
@@ -25,7 +25,7 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
       >
         {content}
         {isStreaming && (
-          <span data-testid="streaming-indicator" className="inline-flex gap-1 ml-2">
+          <span data-testid="streaming-indicator" className="inline-flex gap-1 ml-2" role="status" aria-label="Assistant is typing">
             <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
             <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
             <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
