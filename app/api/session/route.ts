@@ -37,14 +37,18 @@ export async function GET(request: NextRequest) {
 
       if (lastActivity === yesterdayStr) {
         streakDays += 1
-      } else if (lastActivity !== today) {
-        streakDays = 1 // Reset streak
+      } else {
+        streakDays = 1 // Reset streak — gap > 1 day
       }
 
-      await supabase
+      const { error: updateError } = await supabase
         .from('sessions')
         .update({ streak_days: streakDays, last_activity_date: today })
         .eq('id', existing.id)
+
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message }, { status: 500 })
+      }
     }
 
     return NextResponse.json({ ...existing, streak_days: streakDays })
