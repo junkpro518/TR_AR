@@ -9,75 +9,209 @@ interface FeedbackPanelProps {
   goals: string[]
 }
 
+const CEFR = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
+
 export function FeedbackPanel({ feedback, session, goals }: FeedbackPanelProps) {
-  const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
-  const currentLevelIndex = session ? CEFR_LEVELS.indexOf(session.cefr_level) : 0
+  const levelIdx = session ? CEFR.indexOf(session.cefr_level) : 0
+  const levelPct = ((levelIdx + 1) / CEFR.length) * 100
 
   return (
-    <div className="flex flex-col h-full p-3 gap-3 overflow-y-auto">
-      {/* XP + Streak */}
-      {session && (
-        <div className="flex justify-between items-center text-xs text-gray-600">
-          <span className="font-semibold text-indigo-600">⚡ {session.total_xp} XP</span>
-          <span>🔥 {session.streak_days} {session.streak_days === 1 ? 'يوم' : 'أيام'}</span>
-        </div>
-      )}
+    <div
+      className="flex flex-col h-full overflow-y-auto"
+      style={{ background: 'var(--bg-surface)' }}
+    >
+      {/* Header */}
+      <div
+        className="px-4 py-3"
+        style={{ borderBottom: '1px solid var(--border)' }}
+      >
+        <p
+          className="text-xs uppercase tracking-widest font-medium"
+          style={{ color: 'var(--text-muted)', letterSpacing: '0.12em' }}
+        >
+          لوحة التعلم
+        </p>
+      </div>
 
-      {/* CEFR Progress */}
-      {session && (
-        <div>
-          <div className="flex justify-between text-xs text-gray-500 mb-1">
-            {CEFR_LEVELS.map((level, i) => (
+      <div className="flex flex-col gap-5 p-4">
+
+        {/* XP + Streak */}
+        {session && (
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-1.5">
+              <span style={{ color: 'var(--gold)', fontSize: '0.9rem' }}>⚡</span>
               <span
-                key={level}
-                className={`font-medium ${i === currentLevelIndex ? 'text-indigo-600' : ''}`}
+                className="text-sm font-semibold"
+                style={{ color: 'var(--gold-light)' }}
               >
-                {level}
+                {session.total_xp.toLocaleString()} XP
               </span>
-            ))}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span style={{ fontSize: '0.85rem' }}>🔥</span>
+              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                {session.streak_days} {session.streak_days === 1 ? 'يوم' : 'أيام'}
+              </span>
+            </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-1.5">
+        )}
+
+        {/* CEFR Level */}
+        {session && (
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>المستوى</span>
+              <span
+                className="badge badge-gold text-xs"
+              >
+                {session.cefr_level}
+              </span>
+            </div>
             <div
-              className="bg-indigo-500 h-1.5 rounded-full transition-all duration-500"
-              style={{ width: `${((currentLevelIndex + 1) / CEFR_LEVELS.length) * 100}%` }}
-            />
+              className="flex justify-between mb-1.5"
+              style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}
+            >
+              {CEFR.map((l, i) => (
+                <span
+                  key={l}
+                  style={{ color: i === levelIdx ? 'var(--gold)' : undefined }}
+                >
+                  {l}
+                </span>
+              ))}
+            </div>
+            <div
+              className="w-full rounded-full h-1"
+              style={{ background: 'var(--border-light)' }}
+            >
+              <div
+                className="h-1 rounded-full transition-all duration-700"
+                style={{
+                  width: `${levelPct}%`,
+                  background: 'linear-gradient(90deg, var(--gold-dim), var(--gold))',
+                }}
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Goals */}
-      {goals.length > 0 && (
+        {/* Gold divider */}
+        <div className="divider-gold" aria-hidden="true" />
+
+        {/* Goals */}
+        {goals.length > 0 && (
+          <div>
+            <p
+              className="text-xs uppercase tracking-wide mb-2"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              الأهداف
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {goals.map((goal, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span style={{ color: 'var(--gold)', marginTop: '4px', fontSize: '0.5rem' }}>◆</span>
+                  <span className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                    {goal}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="divider-gold mt-4" aria-hidden="true" />
+          </div>
+        )}
+
+        {/* Feedback section */}
         <div>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">الأهداف</h3>
-          <div className="flex flex-col gap-1">
-            {goals.map((goal, i) => (
-              <div key={i} className="text-xs text-gray-700 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full flex-shrink-0" />
-                {goal}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Feedback */}
-      <div>
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">التغذية الراجعة</h3>
-        {!feedback && (
-          <p className="text-xs text-gray-400 text-center py-4">
-            ابدأ المحادثة لرؤية التغذية الراجعة
+          <p
+            className="text-xs uppercase tracking-wide mb-3"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            التغذية الراجعة
           </p>
-        )}
-        {feedback && feedback.items.length === 0 && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-xs text-green-800 text-center">
-            ✓ ممتاز! لا أخطاء في هذه الرسالة
+
+          {!feedback && (
+            <div
+              className="rounded-xl p-4 text-center"
+              style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)' }}
+            >
+              <p
+                className="text-xs leading-relaxed"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                ابدأ المحادثة لرؤية<br />تحليل أخطائك هنا
+              </p>
+            </div>
+          )}
+
+          {feedback && feedback.items.length === 0 && (
+            <div
+              className="rounded-xl p-3 flex items-center gap-2"
+              style={{ background: 'var(--green-bg)', border: '1px solid rgba(74,153,104,0.25)' }}
+            >
+              <span style={{ color: 'var(--green)', fontSize: '0.9rem' }}>✓</span>
+              <p className="text-xs" style={{ color: 'var(--green)' }}>
+                ممتاز! لا أخطاء في هذه الرسالة
+              </p>
+            </div>
+          )}
+
+          {feedback && feedback.items.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {feedback.items.map((item, i) => (
+                <ErrorCard key={i} item={item} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* New vocab */}
+        {feedback && feedback.new_vocab.length > 0 && (
+          <div>
+            <p
+              className="text-xs uppercase tracking-wide mb-2"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              مفردات جديدة
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {feedback.new_vocab.map((v, i) => (
+                <div
+                  key={i}
+                  className="rounded-lg px-3 py-2 flex justify-between items-center gap-2"
+                  style={{
+                    background: 'var(--bg-raised)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <span
+                    className="text-xs font-medium"
+                    style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold-light)' }}
+                  >
+                    {v.word}
+                  </span>
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    {v.translation}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
-        {feedback && feedback.items.length > 0 && (
-          <div className="flex flex-col gap-2">
-            {feedback.items.map((item, i) => (
-              <ErrorCard key={i} item={item} />
-            ))}
+
+        {/* XP earned indicator */}
+        {feedback && feedback.xp_earned > 0 && (
+          <div
+            className="rounded-lg px-3 py-2 flex items-center justify-between"
+            style={{ background: 'var(--gold-glow)', border: '1px solid var(--border-gold)' }}
+          >
+            <span className="text-xs" style={{ color: 'var(--gold-light)' }}>نقاط مكتسبة</span>
+            <span
+              className="text-sm font-semibold"
+              style={{ color: 'var(--gold)' }}
+            >
+              +{feedback.xp_earned} XP
+            </span>
           </div>
         )}
       </div>

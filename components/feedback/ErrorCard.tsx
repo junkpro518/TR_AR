@@ -2,18 +2,11 @@
 
 import type { FeedbackItem } from '@/lib/types'
 
-const ICONS: Record<FeedbackItem['type'], string> = {
-  correct: '✓',
-  correction: '✏️',
-  suggestion: '💡',
-  new_vocab: '📖',
-}
-
-const COLORS: Record<FeedbackItem['type'], string> = {
-  correct: 'bg-green-50 border-green-200 text-green-800',
-  correction: 'bg-orange-50 border-orange-200 text-orange-800',
-  suggestion: 'bg-blue-50 border-blue-200 text-blue-800',
-  new_vocab: 'bg-purple-50 border-purple-200 text-purple-800',
+const CONFIG: Record<FeedbackItem['type'], { icon: string; color: string; bg: string; border: string }> = {
+  correct:    { icon: '✓',  color: 'var(--green)',  bg: 'var(--green-bg)',  border: 'rgba(74,153,104,0.25)' },
+  correction: { icon: '⤴',  color: 'var(--orange)', bg: 'var(--orange-bg)', border: 'rgba(196,122,58,0.25)' },
+  suggestion: { icon: '◈',  color: 'var(--blue)',   bg: 'var(--blue-bg)',   border: 'rgba(90,130,184,0.25)' },
+  new_vocab:  { icon: '⬡',  color: 'var(--gold)',   bg: 'var(--gold-glow)', border: 'var(--border-gold)' },
 }
 
 interface ErrorCardProps {
@@ -21,19 +14,41 @@ interface ErrorCardProps {
 }
 
 export function ErrorCard({ item }: ErrorCardProps) {
+  const c = CONFIG[item.type]
+
   return (
-    <div className={`border rounded-lg p-2 text-xs ${COLORS[item.type]}`}>
-      <div className="flex items-start gap-1.5">
-        <span className="text-sm">{ICONS[item.type]}</span>
-        <div>
+    <div
+      className="rounded-xl p-3 text-xs"
+      style={{ background: c.bg, border: `1px solid ${c.border}` }}
+    >
+      <div className="flex items-start gap-2">
+        <span style={{ color: c.color, fontSize: '0.8rem', lineHeight: 1, marginTop: '1px' }}>
+          {c.icon}
+        </span>
+        <div className="flex-1 min-w-0">
           {item.original && item.correction && (
-            <div className="mb-0.5">
-              <span className="line-through opacity-60">{item.original}</span>
-              <span className="mx-1">→</span>
-              <span className="font-semibold">{item.correction}</span>
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+              <span
+                className="line-through"
+                style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
+              >
+                {item.original}
+              </span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>→</span>
+              <span
+                className="font-medium"
+                style={{ color: c.color, fontFamily: 'var(--font-mono)' }}
+              >
+                {item.correction}
+              </span>
             </div>
           )}
-          <p className="opacity-80">{item.explanation}</p>
+          <p
+            className="leading-relaxed"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            {item.explanation}
+          </p>
         </div>
       </div>
     </div>
