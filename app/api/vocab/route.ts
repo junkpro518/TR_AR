@@ -26,6 +26,34 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(data ?? [])
 }
 
+// PATCH /api/vocab — update card after SRS review
+export async function PATCH(request: NextRequest) {
+  const body = await request.json()
+  const { id, ease_factor, interval, repetitions, next_review_at } = body as {
+    id: string
+    ease_factor: number
+    interval: number
+    repetitions: number
+    next_review_at: string
+  }
+
+  if (!id || ease_factor == null || interval == null || repetitions == null || !next_review_at) {
+    return NextResponse.json({ error: 'id, ease_factor, interval, repetitions, next_review_at required' }, { status: 400 })
+  }
+
+  const supabase = createServerClient()
+  const { data, error } = await supabase
+    .from('vocab_cards')
+    .update({ ease_factor, interval, repetitions, next_review_at })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json(data)
+}
+
 // POST /api/vocab — add new vocab cards (idempotent)
 export async function POST(request: NextRequest) {
   const body = await request.json()
