@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/daily-reminder?secret=tr_ar_cron_2024",
+      "schedule": "0 20 * * *"
+    }
+  ]
+}

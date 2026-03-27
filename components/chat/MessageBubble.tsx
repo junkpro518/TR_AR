@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -18,29 +18,73 @@ const TTS_LANG: Record<string, string> = {
 export function MessageBubble({ role, content, isStreaming, language = 'turkish' }: MessageBubbleProps) {
   const isUser = role === 'user'
   const [speaking, setSpeaking] = useState(false)
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null)
 
-  const speak = useCallback(() => {
-    if (!('speechSynthesis' in window) || !content || isStreaming) return
-
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel()
-
-    if (speaking) {
-      setSpeaking(false)
-      return
+  const stopSpeaking = useCallback(() => {
+    window.speechSynthesis?.cancel()
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause()
+      currentAudioRef.current = null
     }
+    setSpeaking(false)
+  }, [])
 
+  const speakWithWebSpeech = useCallback(() => {
+    if (!('speechSynthesis' in window)) { setSpeaking(false); return }
+    window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(content)
     utterance.lang = TTS_LANG[language] ?? 'tr-TR'
     utterance.rate = 0.9
     utterance.pitch = 1
-
     utterance.onstart = () => setSpeaking(true)
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = () => setSpeaking(false)
-
     window.speechSynthesis.speak(utterance)
-  }, [content, isStreaming, language, speaking])
+  }, [content, language])
+
+  const speak = useCallback(async () => {
+    if (!content || isStreaming) return
+
+    if (speaking) {
+      stopSpeaking()
+      return
+    }
+
+    setSpeaking(true)
+
+    try {
+      // Try Voxtral TTS via server API
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: content, language: 'tr' }),
+      })
+
+      if (res.ok && res.headers.get('Content-Type')?.includes('audio')) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const audio = new Audio(url)
+        currentAudioRef.current = audio
+        audio.onended = () => {
+          setSpeaking(false)
+          URL.revokeObjectURL(url)
+          currentAudioRef.current = null
+        }
+        audio.onerror = () => {
+          setSpeaking(false)
+          URL.revokeObjectURL(url)
+          currentAudioRef.current = null
+          speakWithWebSpeech()
+        }
+        await audio.play()
+        return
+      }
+    } catch {
+      // Fall through to Web Speech API
+    }
+
+    speakWithWebSpeech()
+  }, [content, isStreaming, speaking, stopSpeaking, speakWithWebSpeech])
 
   const hasTTS = typeof window !== 'undefined' && 'speechSynthesis' in window
 

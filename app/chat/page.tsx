@@ -189,6 +189,9 @@ export default function ChatPage() {
               { href: `/tasks?language=turkish&session_id=${session?.id ?? ''}`, label: 'مهام' },
               { href: `/goals?language=turkish`, label: 'أهداف' },
               { href: `/history?language=turkish`, label: 'سجل' },
+              { href: '/vocab-tracker', label: 'مفرداتي' },
+              { href: '/quick-ask', label: 'سؤال سريع' },
+              { href: '/settings', label: 'إعدادات' },
             ].map(item => (
               <Link
                 key={item.href}

@@ -1,0 +1,54 @@
+{
+  "env": {
+    "DISABLE_TELEMETRY": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(apps/api/src/lib/errors.ts:*)",
+      "Bash(apps/api/src/lib/responses.ts:*)",
+      "Bash(apps/api/src/middleware/error-handler.ts:*)",
+      "Bash(apps/api/src/middleware/auth.ts:*)",
+      "Bash(apps/api/src/middleware/audit.ts:*)",
+      "Bash(apps/api/src/middleware/cors.ts:*)",
+      "Bash(apps/api/src/routes/auth.ts:*)",
+      "Bash(apps/api/src/routes/chat.ts:*)",
+      "Bash(apps/api/src/routes/faq.ts:*)",
+      "Bash(apps/api/src/routes/stats.ts:*)",
+      "Bash(apps/api/src/routes/tickets.ts:*)",
+      "Bash(apps/api/src/routes/escalations.ts:*)",
+      "Bash(apps/api/src/routes/index.ts:*)",
+      "Bash(apps/api/src/app.ts:*)",
+      "Bash(pnpm type-check:*)",
+      "Bash(apps/api/src/types/index.ts:*)",
+      "Bash(pnpm --filter @moradbot/api type-check:*)",
+      "Bash(pnpm build:*)",
+      "Bash(npm install:*)",
+      "Bash(firecrawl --status:*)",
+      "WebFetch(domain:docs.salla.dev)",
+      "Bash(FIRECRAWL_API_KEY=\"fc-609db51c9ec24d4d9d1f00cc7dbe3dd5\" firecrawl:*)",
+      "mcp__plugin_claude-mem_mcp-search__save_memory",
+      "Bash(wc:*)",
+      "Skill(session-learning-capture)",
+      "mcp__ide__getDiagnostics",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "WebFetch(domain:supabase.com)",
+      "WebSearch",
+      "WebFetch(domain:openrouter.ai)",
+      "WebFetch(domain:pages.cloudflare.com)",
+      "mcp__firecrawl-mcp__firecrawl_scrape",
+      "mcp__firecrawl-mcp__firecrawl_search",
+      "mcp__firecrawl-mcp__firecrawl_map",
+      "Bash(find:*)",
+      "Bash(read f:*)",
+      "Bash(git grep:*)",
+      "Bash(git push:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "statusLine": {
+    "type": "command",
+    "command": "python3 .claude/scripts/context-monitor.py"
+  }
+}
