@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServerClient()
 
-  // Save feedback items to DB
+  // Save feedback items to DB (including grammar_point for taxonomy)
   if (feedback.items.length > 0) {
     await supabase.from('feedback_log').insert(
       feedback.items.map(item => ({
@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
         original: item.original ?? null,
         correction: item.correction ?? null,
         explanation: item.explanation,
+        grammar_point: item.grammar_point ?? null,
       }))
     )
   }
