@@ -23,32 +23,36 @@ export default function ChatPage() {
   const [goals] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Read language from URL on client
+  // Read language from URL and init session + vocab
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const lang = params.get('language') as Language
-    if (lang === 'turkish' || lang === 'english') {
-      setLanguage(lang)
+    const resolvedLang: Language = (lang === 'turkish' || lang === 'english') ? lang : 'turkish'
+
+    if (resolvedLang !== language) {
+      setLanguage(resolvedLang)
     }
-  }, [])
 
-  // Load session and vocab when language is known
-  useEffect(() => {
-    async function init() {
-      const [sessionRes, vocabRes] = await Promise.all([
-        fetch(`/api/session?language=${language}`),
-        fetch(`/api/vocab?language=${language}&known=true`),
-      ])
+    async function init(lang: Language) {
+      try {
+        const [sessionRes, vocabRes] = await Promise.all([
+          fetch(`/api/session?language=${lang}`),
+          fetch(`/api/vocab?language=${lang}&known=true`),
+        ])
 
-      if (sessionRes.ok) setSession(await sessionRes.json())
+        if (sessionRes.ok) setSession(await sessionRes.json())
 
-      if (vocabRes.ok) {
-        const vocab = await vocabRes.json()
-        setKnownVocab(vocab.map((v: { word: string }) => v.word))
+        if (vocabRes.ok) {
+          const vocab = await vocabRes.json()
+          setKnownVocab(vocab.map((v: { word: string }) => v.word))
+        }
+      } catch {
+        setError('فشل تحميل الجلسة. تحقق من اتصالك بالإنترنت.')
       }
     }
-    init()
-  }, [language])
+
+    init(resolvedLang)
+  }, []) // empty deps — runs once on mount
 
   // Auto-scroll
   useEffect(() => {
@@ -91,34 +95,42 @@ export default function ChatPage() {
 
       if (!chatRes.ok) throw new Error('فشل الاتصال بالمعلم')
 
-      const reader = chatRes.body!.getReader()
+      if (!chatRes.body) throw new Error('لا يوجد رد من الخادم')
+      const reader = chatRes.body.getReader()
       const decoder = new TextDecoder()
       let userMsgDbId: string | null = null
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
+      try {
+        let buffer = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
 
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n').filter(l => l.startsWith('data: '))
+          buffer += decoder.decode(value, { stream: true })
+          const parts = buffer.split('\n')
+          buffer = parts.pop()!
 
-        for (const line of lines) {
-          try {
-            const data = JSON.parse(line.slice(6))
+          for (const line of parts) {
+            if (!line.startsWith('data: ')) continue
+            try {
+              const data = JSON.parse(line.slice(6))
 
-            if (data.text) {
-              setMessages(prev =>
-                prev.map(m => m.id === assistantId ? { ...m, content: m.content + data.text } : m)
-              )
+              if (data.text) {
+                setMessages(prev =>
+                  prev.map(m => m.id === assistantId ? { ...m, content: m.content + data.text } : m)
+                )
+              }
+
+              if (data.done && data.user_message_id) {
+                userMsgDbId = data.user_message_id
+              }
+            } catch {
+              // Skip malformed SSE lines
             }
-
-            if (data.done && data.user_message_id) {
-              userMsgDbId = data.user_message_id
-            }
-          } catch {
-            // Skip malformed SSE lines
           }
         }
+      } finally {
+        reader.releaseLock()
       }
 
       // Trigger feedback analysis (fire and forget)
