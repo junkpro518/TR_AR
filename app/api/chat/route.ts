@@ -4,6 +4,7 @@ import { streamChatCompletion } from '@/lib/openrouter'
 import { buildSystemPrompt } from '@/lib/prompts'
 import { getWeaknessReport } from '@/lib/weakness-analyzer'
 import { analyzeAndUpdateGoals } from '@/lib/goal-analyzer'
+import { loadAppSettings } from '@/lib/settings-loader'
 import type { ChatRequest } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
@@ -40,24 +41,29 @@ export async function POST(request: NextRequest) {
     ? [...new Set(allSessions.flatMap((s: { common_errors?: string[] }) => s.common_errors ?? []))].slice(0, 10)
     : []
 
-  // Task 3: Fetch weakness report for full learning history in system prompt
-  let weaknessReport: Awaited<ReturnType<typeof getWeaknessReport>> | undefined
-  try {
-    weaknessReport = await getWeaknessReport()
-  } catch {
-    // Non-critical — proceed without it
-  }
+  // Load settings and weakness report in parallel (both non-critical)
+  const [appSettings, weaknessReport] = await Promise.all([
+    loadAppSettings().catch(() => null),
+    getWeaknessReport().catch(() => null),
+  ])
 
-  // Build system prompt with student context (current + cross-session errors + weakness data)
+  // Use cefr_override if set in user settings
+  const effectiveCefrLevel = appSettings?.user.cefr_override
+    ? (appSettings.user.cefr_override as typeof cefr_level)
+    : cefr_level
+
+  // Build system prompt with student context (current + cross-session errors + weakness data + settings)
   const systemPrompt = buildSystemPrompt({
     language,
-    cefr_level,
+    cefr_level: effectiveCefrLevel,
     known_vocab,
     goals,
     recent_errors,
     last_topic,
     all_session_errors: allSessionErrors,
-    weakness_report: weaknessReport,
+    weakness_report: weaknessReport ?? undefined,
+    teacher_config: appSettings?.teacher,
+    preferred_topics: appSettings?.user.preferred_topics,
   })
 
   // Fetch recent messages for context (last 20)

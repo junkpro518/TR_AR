@@ -1,4 +1,5 @@
 import type { CEFRLevel, Language, TieredContext } from './types'
+import type { TeacherConfig } from './settings-loader'
 
 export const CEFR_INSTRUCTIONS: Record<CEFRLevel, string> = {
   A1: 'Use very simple sentences. Maximum 5-7 words per sentence. Only the most basic vocabulary. Speak slowly and clearly. Repeat key words.',
@@ -34,6 +35,9 @@ interface PromptParams {
     weakVocab: string[]
     overallAccuracy: number
   }
+  // Teacher & user settings
+  teacher_config?: TeacherConfig
+  preferred_topics?: string[]
 }
 
 export function buildSystemPrompt(params: PromptParams): string {
@@ -64,11 +68,35 @@ export function buildSystemPrompt(params: PromptParams): string {
     ? `\nنقاط ضعف الطالب (ركّز عليها بلطف):\n${params.weakness_report.topWeaknesses.map(w => `- ${w.arabic_name}: ${w.count} خطأ`).join('\n')}\nدقة الطالب الإجمالية: ${params.weakness_report.overallAccuracy}%`
     : ''
 
+  const styleSection = params.teacher_config?.response_style === 'formal'
+    ? '\nاستخدم أسلوباً رسمياً ومنظماً في ردودك.'
+    : '\nاستخدم أسلوباً عفوياً ومحادثاً طبيعياً.'
+
+  const strictnessSection = params.teacher_config?.correction_strictness === 'strict'
+    ? '\nصحّح الأخطاء فوراً بشكل مباشر ومفصّل.'
+    : params.teacher_config?.correction_strictness === 'gentle'
+    ? '\nلا تصحح الأخطاء البسيطة — ركّز على التواصل والثقة بالنفس فقط.'
+    : '' // moderate is default
+
+  const vocabRateSection = params.teacher_config?.vocab_intro_rate === 'slow'
+    ? '\nمعدل المفردات الجديدة: 5% فقط — استخدم مفردات مألوفة بشكل رئيسي.'
+    : params.teacher_config?.vocab_intro_rate === 'fast'
+    ? '\nمعدل المفردات الجديدة: 25% — قدّم كلمات جديدة بشكل متكرر مع شرح فوري.'
+    : '' // medium is default
+
+  const topicsSection = params.preferred_topics && params.preferred_topics.length > 0
+    ? `\nالموضوعات المفضلة للطالب (وجّه المحادثة نحوها): ${params.preferred_topics.join('، ')}`
+    : ''
+
+  const customSection = params.teacher_config?.custom_instructions
+    ? `\nتعليمات خاصة: ${params.teacher_config.custom_instructions}`
+    : ''
+
   return `أنت معلم لغة تركية دافئ ومشجع تحادث طالبك بالعربية والتركية معاً.
 
 مستوى CEFR: ${params.cefr_level}
 ${CEFR_INSTRUCTIONS_AR[params.cefr_level]}
-${vocabSection}${goalsSection}${errorsSection}${weaknessSection}${topicSection}
+${vocabSection}${goalsSection}${errorsSection}${weaknessSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${customSection}
 
 قواعد التكيف:
 - تكلم بالتركية ثم اشرح بالعربية: مثال: "Nasılsın? (كيف حالك؟)"
@@ -83,7 +111,12 @@ ${vocabSection}${goalsSection}${errorsSection}${weaknessSection}${topicSection}
  * Tiered system prompt — lean version (~250 tokens instead of ~2500).
  * Uses TieredContext built by lib/context.ts.
  */
-export function buildSystemPromptFromContext(ctx: TieredContext, allSessionErrors?: string[]): string {
+export function buildSystemPromptFromContext(
+  ctx: TieredContext,
+  allSessionErrors?: string[],
+  teacherConfig?: TeacherConfig,
+  preferredTopics?: string[],
+): string {
   const level = ctx.level
 
   // Tier 2a: compact error watch list — combine current + cross-session errors
@@ -105,8 +138,32 @@ export function buildSystemPromptFromContext(ctx: TieredContext, allSessionError
     ? `\nآخر موضوع: ${ctx.lastTopic}. واصل أو انتقل بشكل طبيعي.`
     : ''
 
+  const styleSection = teacherConfig?.response_style === 'formal'
+    ? '\nاستخدم أسلوباً رسمياً ومنظماً في ردودك.'
+    : '\nاستخدم أسلوباً عفوياً ومحادثاً طبيعياً.'
+
+  const strictnessSection = teacherConfig?.correction_strictness === 'strict'
+    ? '\nصحّح الأخطاء فوراً بشكل مباشر ومفصّل.'
+    : teacherConfig?.correction_strictness === 'gentle'
+    ? '\nلا تصحح الأخطاء البسيطة — ركّز على التواصل والثقة بالنفس فقط.'
+    : '' // moderate is default
+
+  const vocabRateSection = teacherConfig?.vocab_intro_rate === 'slow'
+    ? '\nمعدل المفردات الجديدة: 5% فقط — استخدم مفردات مألوفة بشكل رئيسي.'
+    : teacherConfig?.vocab_intro_rate === 'fast'
+    ? '\nمعدل المفردات الجديدة: 25% — قدّم كلمات جديدة بشكل متكرر مع شرح فوري.'
+    : '' // medium is default
+
+  const topicsSection = preferredTopics && preferredTopics.length > 0
+    ? `\nالموضوعات المفضلة للطالب (وجّه المحادثة نحوها): ${preferredTopics.join('، ')}`
+    : ''
+
+  const customSection = teacherConfig?.custom_instructions
+    ? `\nتعليمات خاصة: ${teacherConfig.custom_instructions}`
+    : ''
+
   return `أنت معلم تركية دافئ ومشجع (مستوى CEFR ${level}) تحادث طالبك بالعربية والتركية معاً.
-${CEFR_INSTRUCTIONS_AR[level]}${errorSection}${vocabSection}${goalSection}${topicSection}
+${CEFR_INSTRUCTIONS_AR[level]}${errorSection}${vocabSection}${goalSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${customSection}
 
 قواعد:
 - استخدم 80% مفردات مألوفة + 20% كلمات جديدة مع شرح قصير في السياق
