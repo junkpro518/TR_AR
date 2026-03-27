@@ -15,8 +15,15 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY!
-  const model = process.env.CHAT_MODEL!
+  const apiKey = process.env.OPENROUTER_API_KEY
+  const model = process.env.CHAT_MODEL
+  if (!apiKey || !model) {
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error.' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
   const supabase = createServerClient()
 
   // Build system prompt with student context
@@ -41,21 +48,29 @@ export async function POST(request: NextRequest) {
 
   const messages = [
     { role: 'system' as const, content: systemPrompt },
-    ...contextMessages.map(m => ({
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-    })),
+    ...contextMessages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      })),
     { role: 'user' as const, content: message },
   ]
 
   // Save user message first
-  const { data: savedUserMsg } = await supabase
+  const { data: savedUserMsg, error: insertError } = await supabase
     .from('messages')
     .insert({ session_id, role: 'user', content: message, xp_earned: 0 })
     .select('id')
     .single()
 
-  const userMessageId = savedUserMsg?.id
+  if (insertError || !savedUserMsg) {
+    return new Response(
+      JSON.stringify({ error: 'Failed to save message. Please try again.' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+  const userMessageId = savedUserMsg.id
 
   // Stream response from OpenRouter
   let stream: ReadableStream<string>
@@ -82,23 +97,25 @@ export async function POST(request: NextRequest) {
           fullResponse += value
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: value })}\n\n`))
         }
+      } catch (err) {
+        controller.error(err)
+        return
       } finally {
         reader.releaseLock()
-
-        // Save assistant message to DB
-        const { data: savedAssistantMsg } = await supabase
-          .from('messages')
-          .insert({ session_id, role: 'assistant', content: fullResponse, xp_earned: 0 })
-          .select('id')
-          .single()
-
-        // Signal completion with message IDs for feedback call
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ done: true, user_message_id: userMessageId, assistant_message_id: savedAssistantMsg?.id })}\n\n`
+        try {
+          const { data: savedAssistantMsg } = await supabase
+            .from('messages')
+            .insert({ session_id, role: 'assistant', content: fullResponse, xp_earned: 0 })
+            .select('id')
+            .single()
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ done: true, user_message_id: userMessageId, assistant_message_id: savedAssistantMsg?.id ?? null })}\n\n`
+            )
           )
-        )
-        controller.close()
+        } finally {
+          controller.close()
+        }
       }
     },
   })
