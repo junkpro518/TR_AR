@@ -72,34 +72,50 @@ export default function TasksPage() {
     }
   }
 
-  const scoreColor = (s: number) =>
-    s >= 80 ? 'text-green-400' : s >= 60 ? 'text-yellow-400' : 'text-red-400'
+  const scoreColor = (s: number): string =>
+    s >= 80 ? 'var(--green)' : s >= 60 ? 'var(--gold)' : 'var(--red)'
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => page === 'list' ? router.back() : setPage('list')} className="text-gray-400 hover:text-white">
-            ←
-          </button>
-          <h1 className="text-xl font-semibold">
-            {page === 'list' ? 'المهام التواصلية' : page === 'doing' ? selectedTask?.title : 'النتيجة'}
-          </h1>
-        </div>
+    <div className="min-h-screen" style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}>
+      {/* Header */}
+      <header
+        className="sticky top-0 z-10 flex items-center gap-3 px-5 py-4"
+        style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}
+      >
+        <button
+          onClick={() => page === 'list' ? router.back() : setPage('list')}
+          className="text-sm transition-colors"
+          style={{ color: 'var(--text-muted)' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+        >
+          ←
+        </button>
+        <h1
+          className="font-semibold"
+          style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+        >
+          {page === 'list' ? 'المهام التواصلية' : page === 'doing' ? selectedTask?.title : 'النتيجة'}
+        </h1>
+      </header>
+
+      <div className="max-w-2xl mx-auto px-4 py-6">
 
         {/* Task List */}
         {page === 'list' && (
           <>
             {/* Level selector */}
-            <div className="flex gap-2 mb-4 flex-wrap">
+            <div className="flex gap-2 mb-5 flex-wrap">
               {CEFR_LEVELS.map(l => (
                 <button
                   key={l}
                   onClick={() => setLevel(l)}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                    level === l ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                  }`}
+                  className="px-3 py-1 rounded-full text-sm font-medium transition-all"
+                  style={
+                    level === l
+                      ? { background: 'var(--gold)', color: '#0D0B08', border: '1px solid var(--gold)' }
+                      : { background: 'var(--bg-raised)', color: 'var(--text-secondary)', border: '1px solid var(--border-light)', cursor: 'pointer' }
+                  }
                 >
                   {l}
                 </button>
@@ -107,35 +123,50 @@ export default function TasksPage() {
             </div>
 
             {loading ? (
-              <div className="text-center text-gray-400 py-16">جاري التحميل...</div>
+              <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>
+                جاري التحميل...
+              </div>
             ) : tasks.length === 0 ? (
-              <div className="text-center text-gray-400 py-16">
+              <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>
                 <p>لا توجد مهام لهذا المستوى بعد</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {tasks.map(task => (
-                  <div key={task.id} className="bg-gray-900 border border-gray-700 rounded-xl p-4">
+                  <div key={task.id} className="card p-4 animate-slide-up">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <span className="text-xs text-blue-400 font-medium">
+                        <span
+                          className="text-xs font-medium"
+                          style={{ color: 'var(--gold)' }}
+                        >
                           {TYPE_LABELS[task.type] ?? task.type}
                         </span>
-                        <h3 className="font-semibold mt-1">{task.title}</h3>
-                        <p className="text-gray-400 text-sm mt-1 line-clamp-2">{task.scenario}</p>
+                        <h3 className="font-semibold mt-1" style={{ color: 'var(--text-primary)' }}>
+                          {task.title}
+                        </h3>
+                        <p className="text-sm mt-1 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>
+                          {task.scenario}
+                        </p>
                         <div className="flex gap-2 mt-2 flex-wrap">
                           {task.target_vocab.slice(0, 3).map(w => (
-                            <span key={w} className="text-xs bg-gray-800 px-2 py-0.5 rounded-full text-gray-300">
+                            <span
+                              key={w}
+                              className="text-xs px-2 py-0.5 rounded-full"
+                              style={{ background: 'var(--bg-raised)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+                            >
                               {w}
                             </span>
                           ))}
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-yellow-400 text-sm font-bold">{task.xp_reward} XP</p>
+                        <p className="text-sm font-bold" style={{ color: 'var(--gold-light)' }}>
+                          {task.xp_reward} XP
+                        </p>
                         <button
                           onClick={() => startTask(task)}
-                          className="mt-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm"
+                          className="btn-gold mt-2 px-3 py-1.5 rounded-lg text-sm"
                         >
                           ابدأ
                         </button>
@@ -150,15 +181,29 @@ export default function TasksPage() {
 
         {/* Task Doing */}
         {page === 'doing' && selectedTask && (
-          <div className="space-y-4">
-            <div className="bg-blue-900/30 border border-blue-700/50 rounded-xl p-4">
-              <p className="text-sm text-blue-200">{selectedTask.scenario}</p>
+          <div className="space-y-4 animate-slide-up">
+            <div
+              className="rounded-xl p-4"
+              style={{
+                background: 'var(--blue-bg)',
+                border: '1px solid rgba(90,130,184,0.3)',
+              }}
+            >
+              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                {selectedTask.scenario}
+              </p>
               {selectedTask.target_vocab.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-xs text-gray-400 mb-1">مفردات مستهدفة:</p>
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>
+                    مفردات مستهدفة:
+                  </p>
                   <div className="flex gap-2 flex-wrap">
                     {selectedTask.target_vocab.map(w => (
-                      <span key={w} className="text-xs bg-blue-800/50 px-2 py-0.5 rounded-full text-blue-200">
+                      <span
+                        key={w}
+                        className="text-xs px-2 py-0.5 rounded-full"
+                        style={{ background: 'var(--blue-bg)', color: 'var(--blue)', border: '1px solid rgba(90,130,184,0.3)' }}
+                      >
                         {w}
                       </span>
                     ))}
@@ -172,14 +217,14 @@ export default function TasksPage() {
               onChange={e => setUserText(e.target.value)}
               placeholder="اكتب ردك هنا..."
               rows={6}
-              className="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 text-white placeholder-gray-500 resize-none focus:outline-none focus:border-blue-500"
+              className="input-field w-full rounded-xl p-4 resize-none"
               dir="auto"
             />
 
             <button
               onClick={submitTask}
               disabled={submitting || !userText.trim()}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-xl font-medium"
+              className="btn-gold w-full py-3 rounded-xl font-medium"
             >
               {submitting ? 'يتم التقييم...' : 'إرسال للتقييم'}
             </button>
@@ -188,13 +233,18 @@ export default function TasksPage() {
 
         {/* Result */}
         {page === 'result' && result && selectedTask && (
-          <div className="space-y-4">
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 text-center">
-              <p className="text-gray-400 text-sm">النتيجة الإجمالية</p>
-              <p className={`text-5xl font-bold mt-1 ${scoreColor(result.feedback.overall_score)}`}>
+          <div className="space-y-4 animate-slide-up">
+            <div className="card p-6 text-center">
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>النتيجة الإجمالية</p>
+              <p
+                className="text-5xl font-bold mt-1"
+                style={{ color: scoreColor(result.feedback.overall_score), fontFamily: 'var(--font-display)' }}
+              >
                 {result.feedback.overall_score}%
               </p>
-              <p className="text-yellow-400 mt-2">+{result.xp_earned} XP</p>
+              <p className="mt-2" style={{ color: 'var(--gold-light)' }}>
+                +{result.xp_earned} XP
+              </p>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
@@ -203,52 +253,75 @@ export default function TasksPage() {
                 { label: 'القواعد', value: result.feedback.grammar_score },
                 { label: 'الطلاقة', value: result.feedback.fluency_score },
               ].map(item => (
-                <div key={item.label} className="bg-gray-900 border border-gray-700 rounded-xl p-3 text-center">
-                  <p className="text-xs text-gray-400">{item.label}</p>
-                  <p className={`text-2xl font-bold mt-1 ${scoreColor(item.value)}`}>{item.value}%</p>
+                <div key={item.label} className="card p-3 text-center">
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{item.label}</p>
+                  <p
+                    className="text-2xl font-bold mt-1"
+                    style={{ color: scoreColor(item.value) }}
+                  >
+                    {item.value}%
+                  </p>
                 </div>
               ))}
             </div>
 
             {result.feedback.strengths.length > 0 && (
-              <div className="bg-green-900/20 border border-green-700/40 rounded-xl p-4">
-                <p className="text-green-400 font-medium text-sm mb-2">نقاط القوة</p>
+              <div
+                className="rounded-xl p-4"
+                style={{ background: 'var(--green-bg)', border: '1px solid rgba(74,153,104,0.3)' }}
+              >
+                <p className="font-medium text-sm mb-2" style={{ color: 'var(--green)' }}>
+                  نقاط القوة
+                </p>
                 <ul className="space-y-1">
                   {result.feedback.strengths.map((s, i) => (
-                    <li key={i} className="text-sm text-gray-300">✓ {s}</li>
+                    <li key={i} className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      ✓ {s}
+                    </li>
                   ))}
                 </ul>
               </div>
             )}
 
             {result.feedback.improvements.length > 0 && (
-              <div className="bg-orange-900/20 border border-orange-700/40 rounded-xl p-4">
-                <p className="text-orange-400 font-medium text-sm mb-2">للتحسين</p>
+              <div
+                className="rounded-xl p-4"
+                style={{ background: 'var(--orange-bg)', border: '1px solid rgba(196,122,58,0.3)' }}
+              >
+                <p className="font-medium text-sm mb-2" style={{ color: 'var(--orange)' }}>
+                  للتحسين
+                </p>
                 <ul className="space-y-1">
                   {result.feedback.improvements.map((s, i) => (
-                    <li key={i} className="text-sm text-gray-300">• {s}</li>
+                    <li key={i} className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      • {s}
+                    </li>
                   ))}
                 </ul>
               </div>
             )}
 
             {result.feedback.corrected_text && (
-              <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
-                <p className="text-blue-400 font-medium text-sm mb-2">النص المصحح</p>
-                <p className="text-gray-300 text-sm" dir="auto">{result.feedback.corrected_text}</p>
+              <div className="card p-4">
+                <p className="font-medium text-sm mb-2" style={{ color: 'var(--blue)' }}>
+                  النص المصحح
+                </p>
+                <p className="text-sm" dir="auto" style={{ color: 'var(--text-secondary)' }}>
+                  {result.feedback.corrected_text}
+                </p>
               </div>
             )}
 
             <div className="flex gap-3">
               <button
                 onClick={() => setPage('list')}
-                className="flex-1 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-sm"
+                className="btn-ghost flex-1 py-3 rounded-xl text-sm"
               >
                 مهمة أخرى
               </button>
               <button
                 onClick={() => router.push(`/chat?language=${language}&session_id=${sessionId}`)}
-                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm"
+                className="btn-gold flex-1 py-3 rounded-xl text-sm"
               >
                 محادثة
               </button>

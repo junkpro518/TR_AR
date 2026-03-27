@@ -9,6 +9,16 @@ export const CEFR_INSTRUCTIONS: Record<CEFRLevel, string> = {
   C2: 'Complete native-level conversation. Use colloquialisms, regional expressions, and sophisticated vocabulary freely.',
 }
 
+// Arabic CEFR instructions for the Arabic+Turkish teacher persona
+const CEFR_INSTRUCTIONS_AR: Record<CEFRLevel, string> = {
+  A1: 'استخدم جملاً بسيطة جداً. 5-7 كلمات كحد أقصى. المفردات الأساسية فقط. تكلم ببطء ووضوح. كرر الكلمات المهمة.',
+  A2: 'استخدم جملاً بسيطة. قدّم المفردات اليومية الشائعة. اشرح الكلمات الجديدة فوراً في سياق المحادثة.',
+  B1: 'أجرِ محادثة طبيعية. امزج المفردات المألوفة مع كلمات جديدة (اشرحها في السياق). تناول موضوعات يومية متنوعة.',
+  B2: 'تكلم بشكل طبيعي وسلس. استخدم التعابير الاصطلاحية أحياناً. ناقش موضوعات مجردة.',
+  C1: 'تكلم كالناطق الأصلي. استخدم الأمثال والتراكيب النحوية المعقدة بشكل طبيعي. تحدَّ الطالب بلغة دقيقة.',
+  C2: 'محادثة كاملة على مستوى الناطق الأصلي. استخدم العامية والتعبيرات المحلية والمفردات الراقية بحرية.',
+}
+
 interface PromptParams {
   language: Language
   cefr_level: CEFRLevel
@@ -16,71 +26,92 @@ interface PromptParams {
   goals: string[]
   recent_errors: string[]
   last_topic: string | null
+  // Task 3: cross-session aggregate errors
+  all_session_errors?: string[]
+  // Task 3: weakness report from cross-session analysis
+  weakness_report?: {
+    topWeaknesses: Array<{ grammar_point: string; arabic_name: string; count: number }>
+    weakVocab: string[]
+    overallAccuracy: number
+  }
 }
 
 export function buildSystemPrompt(params: PromptParams): string {
-  const langName = params.language === 'turkish' ? 'Turkish' : 'English'
   const vocabSection = params.known_vocab.length > 0
-    ? `\nVocabulary the student knows (use 80% of these, introduce 20% new words with in-context explanations):\n${params.known_vocab.join(', ')}`
-    : '\nThe student is just starting. Use only the most basic vocabulary.'
+    ? `\nالمفردات التي يعرفها الطالب (استخدم 80% منها وقدّم 20% كلمات جديدة مع شرحها في السياق):\n${params.known_vocab.join(', ')}`
+    : '\nالطالب مبتدئ. استخدم المفردات الأساسية فقط.'
 
   const goalsSection = params.goals.length > 0
-    ? `\nStudent learning goals (guide conversation toward these naturally):\n${params.goals.map(g => `- ${g}`).join('\n')}`
+    ? `\nأهداف الطالب التعليمية (وجّه المحادثة نحوها بشكل طبيعي):\n${params.goals.map(g => `- ${g}`).join('\n')}`
     : ''
 
-  const errorsSection = params.recent_errors.length > 0
-    ? `\nRecent mistakes to watch for (correct gently if repeated more than twice):\n${params.recent_errors.map(e => `- ${e}`).join('\n')}`
+  // Combine current session errors with cross-session errors, deduplicated
+  const allErrors = [
+    ...params.recent_errors,
+    ...(params.all_session_errors ?? []),
+  ]
+  const uniqueErrors = [...new Set(allErrors)]
+
+  const errorsSection = uniqueErrors.length > 0
+    ? `\nأخطاء متكررة يجب الانتباه إليها (صحّح بلطف إذا تكررت أكثر من مرتين):\n${uniqueErrors.map(e => `- ${e}`).join('\n')}`
     : ''
 
   const topicSection = params.last_topic
-    ? `\nLast conversation topic: ${params.last_topic}. Continue naturally or introduce a related topic.`
+    ? `\nآخر موضوع للمحادثة: ${params.last_topic}. واصل بشكل طبيعي أو انتقل إلى موضوع مرتبط.`
     : ''
 
-  return `You are a warm, encouraging ${langName} language teacher having a natural conversation with your student.
+  const weaknessSection = params.weakness_report && params.weakness_report.topWeaknesses.length > 0
+    ? `\nنقاط ضعف الطالب (ركّز عليها بلطف):\n${params.weakness_report.topWeaknesses.map(w => `- ${w.arabic_name}: ${w.count} خطأ`).join('\n')}\nدقة الطالب الإجمالية: ${params.weakness_report.overallAccuracy}%`
+    : ''
 
-CEFR Level: ${params.cefr_level}
-Instruction: ${CEFR_INSTRUCTIONS[params.cefr_level]}
-${vocabSection}${goalsSection}${errorsSection}${topicSection}
+  return `أنت معلم لغة تركية دافئ ومشجع تحادث طالبك بالعربية والتركية معاً.
 
-Adaptation rules:
-- Never correct errors directly mid-sentence — instead rephrase your response using the correct form naturally
-- If the same error appears more than twice in this session, gently explain it: "By the way, in ${langName} we say..."
-- When you use a new word the student may not know, briefly explain it in parentheses
-- Keep responses concise and conversational (2-4 sentences max)
-- End each response with a question or prompt to keep the conversation flowing
-- Respond ONLY in ${langName} unless the student is completely lost`
+مستوى CEFR: ${params.cefr_level}
+${CEFR_INSTRUCTIONS_AR[params.cefr_level]}
+${vocabSection}${goalsSection}${errorsSection}${weaknessSection}${topicSection}
+
+قواعد التكيف:
+- تكلم بالتركية ثم اشرح بالعربية: مثال: "Nasılsın? (كيف حالك؟)"
+- لا تصحح الأخطاء مباشرة — أعد صياغة الجملة بشكل صحيح بشكل طبيعي
+- إذا تكرر نفس الخطأ أكثر من مرتين، اشرحه بلطف: "بالمناسبة، في التركية نقول..."
+- عندما تستخدم كلمة جديدة، اشرحها بالعربية بين قوسين
+- اجعل ردودك موجزة (2-4 جمل) وانهِ دائماً بسؤال للحفاظ على تدفق المحادثة
+- تحدث دائماً بالتركية مع الشرح العربي، لا تستخدم الإنجليزية أبداً`
 }
 
 /**
  * Tiered system prompt — lean version (~250 tokens instead of ~2500).
  * Uses TieredContext built by lib/context.ts.
  */
-export function buildSystemPromptFromContext(ctx: TieredContext): string {
-  const langName = ctx.language === 'turkish' ? 'Turkish' : 'English'
+export function buildSystemPromptFromContext(ctx: TieredContext, allSessionErrors?: string[]): string {
   const level = ctx.level
 
-  // Tier 2a: compact error watch list
-  const errorSection = ctx.recentErrors.length > 0
-    ? `\nWatch for: ${ctx.recentErrors.map(e => `${e.grammar_point} (e.g. "${e.pattern}")`).join('; ')}`
+  // Tier 2a: compact error watch list — combine current + cross-session errors
+  const currentErrors = ctx.recentErrors.map(e => `${e.grammar_point} (مثال: "${e.pattern}")`)
+  const crossErrors = (allSessionErrors ?? []).map(e => e)
+  const allErrors = [...new Set([...currentErrors, ...crossErrors])]
+  const errorSection = allErrors.length > 0
+    ? `\nأخطاء متكررة للانتباه: ${allErrors.join('; ')}`
     : ''
 
   // Tier 2b: weak vocab hint (space-efficient)
   const vocabSection = ctx.weakVocab.length > 0
-    ? `\nReinforce these weak words naturally: ${ctx.weakVocab.slice(0, 10).join(', ')}`
+    ? `\nعزّز هذه الكلمات الضعيفة بشكل طبيعي: ${ctx.weakVocab.slice(0, 10).join(', ')}`
     : ''
 
   // Tier 2c + last topic
-  const goalSection = ctx.currentGoal ? `\nCurrent goal: ${ctx.currentGoal}` : ''
+  const goalSection = ctx.currentGoal ? `\nالهدف الحالي: ${ctx.currentGoal}` : ''
   const topicSection = ctx.lastTopic
-    ? `\nLast topic: ${ctx.lastTopic}. Continue or transition naturally.`
+    ? `\nآخر موضوع: ${ctx.lastTopic}. واصل أو انتقل بشكل طبيعي.`
     : ''
 
-  return `You are a warm, encouraging ${langName} teacher (CEFR ${level}).
-${CEFR_INSTRUCTIONS[level]}${errorSection}${vocabSection}${goalSection}${topicSection}
+  return `أنت معلم تركية دافئ ومشجع (مستوى CEFR ${level}) تحادث طالبك بالعربية والتركية معاً.
+${CEFR_INSTRUCTIONS_AR[level]}${errorSection}${vocabSection}${goalSection}${topicSection}
 
-Rules:
-- Use 80% familiar vocab + 20% new words with brief in-context explanations
-- Never correct errors mid-sentence — rephrase naturally with the correct form
-- Keep responses 2-4 sentences; end with a question to continue the conversation
-- Respond ONLY in ${langName} unless the student is completely lost`
+قواعد:
+- استخدم 80% مفردات مألوفة + 20% كلمات جديدة مع شرح قصير في السياق
+- تكلم بالتركية ثم اشرح بالعربية بين قوسين: مثال "Merhaba! (مرحباً!)"
+- لا تصحح الأخطاء مباشرة — أعد الصياغة بشكل صحيح بشكل طبيعي
+- اجعل الردود 2-4 جمل؛ انهِ بسؤال لمواصلة المحادثة
+- لا تستخدم الإنجليزية أبداً`
 }

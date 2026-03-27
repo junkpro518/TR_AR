@@ -2,14 +2,29 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import type { Language, CEFRLevel } from '@/lib/types'
 
-// GET /api/session?language=turkish
+// GET /api/session?language=turkish  OR  GET /api/session?id=<session_id>
 export async function GET(request: NextRequest) {
-  const language = request.nextUrl.searchParams.get('language') as Language
-  if (!language || !['turkish', 'english'].includes(language)) {
-    return NextResponse.json({ error: 'Invalid language' }, { status: 400 })
+  const id = request.nextUrl.searchParams.get('id')
+  const supabase = createServerClient()
+
+  // Fetch a specific session by ID (used by "resume conversation")
+  if (id) {
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error || !data) {
+      return NextResponse.json({ error: error?.message ?? 'Session not found' }, { status: 404 })
+    }
+    return NextResponse.json(data)
   }
 
-  const supabase = createServerClient()
+  const language = request.nextUrl.searchParams.get('language') as Language
+  if (!language || language !== 'turkish') {
+    return NextResponse.json({ error: 'Invalid language' }, { status: 400 })
+  }
 
   // Get or create the active session for this language
   const { data: existing, error } = await supabase

@@ -23,11 +23,58 @@ interface MessageRow {
   created_at: string
 }
 
+const PREVIEW_LENGTH = 300
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('ar-SA', {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
   })
+}
+
+function MessageBubble({ m }: { m: MessageRow }) {
+  const [expanded, setExpanded] = useState(false)
+  const isLong = m.content.length > PREVIEW_LENGTH
+  const displayed = isLong && !expanded ? `${m.content.slice(0, PREVIEW_LENGTH)}…` : m.content
+
+  return (
+    <div className={`flex gap-2 pt-2 ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className="max-w-[85%] flex flex-col gap-1">
+        <div
+          className="rounded-xl px-3 py-2 text-xs leading-relaxed"
+          dir="auto"
+          style={
+            m.role === 'user'
+              ? {
+                  background: 'linear-gradient(135deg, var(--gold-dim) 0%, var(--gold) 100%)',
+                  color: '#0D0B08',
+                }
+              : {
+                  background: 'var(--bg-raised)',
+                  border: '1px solid var(--border-light, var(--border))',
+                  color: 'var(--text-primary)',
+                }
+          }
+        >
+          {displayed}
+        </div>
+        {isLong && (
+          <button
+            onClick={() => setExpanded(v => !v)}
+            className="text-xs self-start px-1"
+            style={{ color: 'var(--gold)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            {expanded ? 'عرض أقل' : 'عرض المزيد'}
+          </button>
+        )}
+      </div>
+      {m.xp_earned > 0 && (
+        <span className="text-xs self-end shrink-0" style={{ color: 'var(--gold)', opacity: 0.7 }}>
+          +{m.xp_earned}
+        </span>
+      )}
+    </div>
+  )
 }
 
 export default function HistoryPage() {
@@ -56,6 +103,11 @@ export default function HistoryPage() {
     const data = await res.json()
     setMessages(Array.isArray(data) ? data : [])
     setLoadingMsgs(false)
+  }
+
+  function resumeSession(e: React.MouseEvent, session_id: string) {
+    e.stopPropagation()
+    router.push(`/chat?session_id=${session_id}&language=turkish`)
   }
 
   return (
@@ -113,6 +165,25 @@ export default function HistoryPage() {
                       {formatDate(s.created_at)}
                     </p>
                   </div>
+
+                  {/* Resume button */}
+                  <button
+                    onClick={(e) => resumeSession(e, s.id)}
+                    className="shrink-0 text-xs px-2.5 py-1 rounded-lg transition-opacity"
+                    style={{
+                      background: 'var(--gold)',
+                      color: '#0D0B08',
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '0.85' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
+                  >
+                    استئناف ←
+                  </button>
+
                   <span
                     className="text-sm transition-transform"
                     style={{
@@ -139,29 +210,7 @@ export default function HistoryPage() {
                         لا توجد رسائل
                       </p>
                     ) : (
-                      messages.map(m => (
-                        <div
-                          key={m.id}
-                          className={`flex gap-2 pt-2 ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-                        >
-                          <div
-                            className="max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed"
-                            dir="auto"
-                            style={
-                              m.role === 'user'
-                                ? { background: 'var(--gold-glow)', border: '1px solid var(--border-gold)', color: 'var(--gold-light)' }
-                                : { background: 'var(--bg-raised)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }
-                            }
-                          >
-                            {m.content.length > 200 ? `${m.content.slice(0, 200)}…` : m.content}
-                          </div>
-                          {m.xp_earned > 0 && (
-                            <span className="text-xs self-end shrink-0" style={{ color: 'var(--gold)', opacity: 0.7 }}>
-                              +{m.xp_earned}
-                            </span>
-                          )}
-                        </div>
-                      ))
+                      messages.map(m => <MessageBubble key={m.id} m={m} />)
                     )}
                   </div>
                 )}

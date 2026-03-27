@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { streamChatCompletion } from '@/lib/openrouter'
 import { buildSystemPrompt } from '@/lib/prompts'
+import { getWeaknessReport } from '@/lib/weakness-analyzer'
+import { analyzeAndUpdateGoals } from '@/lib/goal-analyzer'
 import type { ChatRequest } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
@@ -26,7 +28,27 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServerClient()
 
-  // Build system prompt with student context
+  // Task 3: Fetch cross-session context — aggregate errors from last 10 sessions
+  const { data: allSessions } = await supabase
+    .from('sessions')
+    .select('common_errors, last_topic, total_xp, cefr_level')
+    .eq('language', 'turkish')
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  const allSessionErrors: string[] = allSessions
+    ? [...new Set(allSessions.flatMap((s: { common_errors?: string[] }) => s.common_errors ?? []))].slice(0, 10)
+    : []
+
+  // Task 3: Fetch weakness report for full learning history in system prompt
+  let weaknessReport: Awaited<ReturnType<typeof getWeaknessReport>> | undefined
+  try {
+    weaknessReport = await getWeaknessReport()
+  } catch {
+    // Non-critical — proceed without it
+  }
+
+  // Build system prompt with student context (current + cross-session errors + weakness data)
   const systemPrompt = buildSystemPrompt({
     language,
     cefr_level,
@@ -34,6 +56,8 @@ export async function POST(request: NextRequest) {
     goals,
     recent_errors,
     last_topic,
+    all_session_errors: allSessionErrors,
+    weakness_report: weaknessReport,
   })
 
   // Fetch recent messages for context (last 20)
@@ -113,6 +137,8 @@ export async function POST(request: NextRequest) {
               `data: ${JSON.stringify({ done: true, user_message_id: userMessageId, assistant_message_id: savedAssistantMsg?.id ?? null })}\n\n`
             )
           )
+          // Task 1: Fire-and-forget — analyze conversation and auto-add/update goals
+          analyzeAndUpdateGoals(supabase, session_id, message, fullResponse, cefr_level).catch(() => {})
         } finally {
           controller.close()
         }

@@ -84,34 +84,51 @@ export default function LessonsPage() {
   const currentEx = lesson?.exercises[exIndex]
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => page === 'idle' ? router.back() : setPage('idle')} className="text-gray-400 hover:text-white">
-            ←
-          </button>
-          <h1 className="text-xl font-semibold">
-            {page === 'idle' ? 'درس جديد' : page === 'loading' ? 'يتم التوليد...' : page === 'exercises' ? 'تمارين' : lesson?.title ?? 'الدرس'}
-          </h1>
-          <span className="text-xs text-gray-500 ml-auto">{cefr_level} • {language === 'turkish' ? 'تركي' : 'إنجليزي'}</span>
-        </div>
+    <div className="min-h-screen" style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}>
+      {/* Header */}
+      <header
+        className="sticky top-0 z-10 flex items-center gap-3 px-5 py-4"
+        style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}
+      >
+        <button
+          onClick={() => page === 'idle' ? router.back() : setPage('idle')}
+          className="text-sm transition-colors"
+          style={{ color: 'var(--text-muted)' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+        >
+          ←
+        </button>
+        <h1
+          className="font-semibold flex-1"
+          style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+        >
+          {page === 'idle' ? 'درس جديد' : page === 'loading' ? 'يتم التوليد...' : page === 'exercises' ? 'تمارين' : lesson?.title ?? 'الدرس'}
+        </h1>
+        <span className="badge badge-gold text-xs">
+          {cefr_level} • {language === 'turkish' ? 'تركي' : 'إنجليزي'}
+        </span>
+      </header>
+
+      <div className="max-w-2xl mx-auto px-4 py-6">
 
         {/* Idle: topic input */}
         {page === 'idle' && (
-          <div className="space-y-4">
-            <p className="text-gray-400 text-sm">اختر موضوعًا للدرس أو اتركه فارغًا ليختار النظام:</p>
+          <div className="space-y-4 animate-slide-up">
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              اختر موضوعًا للدرس أو اتركه فارغًا ليختار النظام:
+            </p>
             <input
               value={topic}
               onChange={e => setTopic(e.target.value)}
               placeholder="مثال: الأفعال المضارعة، التحيات، الأرقام..."
-              className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              className="input-field w-full rounded-xl px-4 py-3"
               onKeyDown={e => e.key === 'Enter' && generateLesson()}
             />
-            {error && <p className="text-red-400 text-sm">{error}</p>}
+            {error && <p className="text-sm" style={{ color: 'var(--red)' }}>{error}</p>}
             <button
               onClick={generateLesson}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-medium"
+              className="btn-gold w-full py-3 rounded-xl font-medium"
             >
               توليد الدرس
             </button>
@@ -122,27 +139,41 @@ export default function LessonsPage() {
         {page === 'loading' && (
           <div className="text-center py-20">
             <div className="text-4xl mb-4 animate-pulse">📚</div>
-            <p className="text-gray-400">يتم تحضير درسك...</p>
+            <p style={{ color: 'var(--text-muted)' }}>يتم تحضير درسك...</p>
           </div>
         )}
 
         {/* Lesson content */}
         {page === 'lesson' && lesson && (
-          <div className="space-y-5">
+          <div className="space-y-4 animate-slide-up">
             {/* Grammar explanation */}
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-5">
-              <p className="text-xs text-blue-400 font-medium mb-1">النقطة النحوية: {lesson.grammar_point}</p>
-              <p className="text-gray-200 leading-relaxed">{lesson.explanation}</p>
+            <div className="card p-5">
+              <p className="text-xs font-medium mb-2" style={{ color: 'var(--gold)' }}>
+                النقطة النحوية: {lesson.grammar_point}
+              </p>
+              <p className="leading-relaxed" style={{ color: 'var(--text-primary)' }}>
+                {lesson.explanation}
+              </p>
             </div>
 
             {/* Examples */}
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-5">
-              <p className="text-sm font-medium text-gray-300 mb-3">أمثلة</p>
+            <div className="card p-5">
+              <p className="text-sm font-medium mb-3" style={{ color: 'var(--text-secondary)' }}>
+                أمثلة
+              </p>
               <div className="space-y-3">
                 {lesson.examples.map((ex, i) => (
-                  <div key={i} className="border-r-2 border-blue-600 pr-3">
-                    <p className="text-white font-medium" dir="auto">{ex.target}</p>
-                    <p className="text-gray-400 text-sm">{ex.translation}</p>
+                  <div
+                    key={i}
+                    className="pr-3"
+                    style={{ borderRight: '2px solid var(--border-gold)' }}
+                  >
+                    <p className="font-medium" dir="auto" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+                      {ex.target}
+                    </p>
+                    <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                      {ex.translation}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -150,15 +181,23 @@ export default function LessonsPage() {
 
             {/* Vocabulary */}
             {lesson.vocab.length > 0 && (
-              <div className="bg-gray-900 border border-gray-700 rounded-xl p-5">
-                <p className="text-sm font-medium text-gray-300 mb-3">المفردات الجديدة</p>
+              <div className="card p-5">
+                <p className="text-sm font-medium mb-3" style={{ color: 'var(--text-secondary)' }}>
+                  المفردات الجديدة
+                </p>
                 <div className="space-y-2">
                   {lesson.vocab.map((v, i) => (
                     <div key={i} className="flex justify-between items-start gap-4">
-                      <span className="font-medium text-white" dir="auto">{v.word}</span>
+                      <span
+                        className="font-medium"
+                        dir="auto"
+                        style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}
+                      >
+                        {v.word}
+                      </span>
                       <div className="text-right">
-                        <p className="text-blue-300 text-sm">{v.translation}</p>
-                        <p className="text-gray-500 text-xs" dir="auto">{v.example}</p>
+                        <p className="text-sm" style={{ color: 'var(--gold-light)' }}>{v.translation}</p>
+                        <p className="text-xs" dir="auto" style={{ color: 'var(--text-muted)' }}>{v.example}</p>
                       </div>
                     </div>
                   ))}
@@ -169,13 +208,13 @@ export default function LessonsPage() {
             <div className="flex gap-3">
               <button
                 onClick={startExercises}
-                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-medium"
+                className="btn-gold flex-1 py-3 rounded-xl font-medium"
               >
                 ابدأ التمارين ({lesson.exercises.length})
               </button>
               <button
                 onClick={generateLesson}
-                className="px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-sm"
+                className="btn-ghost px-4 py-3 rounded-xl text-sm"
               >
                 درس جديد
               </button>
@@ -185,18 +224,30 @@ export default function LessonsPage() {
 
         {/* Exercises */}
         {page === 'exercises' && lesson && !exDone && currentEx && (
-          <div className="space-y-4">
-            <div className="flex justify-between text-xs text-gray-400 mb-2">
+          <div className="space-y-4 animate-slide-up">
+            <div className="flex justify-between text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
               <span>{exIndex + 1} / {lesson.exercises.length}</span>
-              <span>{score} صح</span>
+              <span style={{ color: 'var(--green)' }}>{score} صح</span>
             </div>
-            <div className="w-full bg-gray-800 rounded-full h-1">
-              <div className="bg-blue-500 h-1 rounded-full transition-all" style={{ width: `${(exIndex / lesson.exercises.length) * 100}%` }} />
+            <div className="w-full rounded-full h-1" style={{ background: 'var(--border-light)' }}>
+              <div
+                className="h-1 rounded-full transition-all"
+                style={{
+                  width: `${(exIndex / lesson.exercises.length) * 100}%`,
+                  background: 'linear-gradient(90deg, var(--gold-dim), var(--gold))',
+                }}
+              />
             </div>
 
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-5">
-              <p className="text-gray-200 text-lg" dir="auto">{currentEx.question}</p>
-              {currentEx.hint && <p className="text-gray-500 text-sm mt-1">تلميح: {currentEx.hint}</p>}
+            <div className="card p-5">
+              <p className="text-lg" dir="auto" style={{ color: 'var(--text-primary)' }}>
+                {currentEx.question}
+              </p>
+              {currentEx.hint && (
+                <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                  تلميح: {currentEx.hint}
+                </p>
+              )}
             </div>
 
             {!revealed ? (
@@ -205,21 +256,46 @@ export default function LessonsPage() {
                   value={userAnswer}
                   onChange={e => setUserAnswer(e.target.value)}
                   placeholder="إجابتك..."
-                  className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="input-field w-full rounded-xl px-4 py-3"
                   dir="auto"
                   onKeyDown={e => e.key === 'Enter' && checkAnswer()}
                 />
-                <button onClick={checkAnswer} disabled={!userAnswer.trim()} className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 rounded-xl">
+                <button
+                  onClick={checkAnswer}
+                  disabled={!userAnswer.trim()}
+                  className="btn-gold w-full py-3 rounded-xl"
+                >
                   تحقق
                 </button>
               </>
             ) : (
               <>
-                <div className={`border rounded-xl p-4 ${userAnswer.trim().toLowerCase() === currentEx.answer.trim().toLowerCase() ? 'bg-green-900/30 border-green-700' : 'bg-red-900/30 border-red-700'}`}>
-                  <p className="text-sm text-gray-300">الإجابة الصحيحة:</p>
-                  <p className="font-medium mt-1" dir="auto">{currentEx.answer}</p>
+                <div
+                  className="rounded-xl p-4"
+                  style={
+                    userAnswer.trim().toLowerCase() === currentEx.answer.trim().toLowerCase()
+                      ? { background: 'var(--green-bg)', border: '1px solid rgba(74,153,104,0.3)' }
+                      : { background: 'var(--red-bg)', border: '1px solid rgba(184,72,72,0.3)' }
+                  }
+                >
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>الإجابة الصحيحة:</p>
+                  <p
+                    className="font-medium mt-1"
+                    dir="auto"
+                    style={{
+                      color: userAnswer.trim().toLowerCase() === currentEx.answer.trim().toLowerCase()
+                        ? 'var(--green)'
+                        : 'var(--red)',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    {currentEx.answer}
+                  </p>
                 </div>
-                <button onClick={nextExercise} className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl">
+                <button
+                  onClick={nextExercise}
+                  className="btn-gold w-full py-3 rounded-xl"
+                >
                   {exIndex + 1 < lesson.exercises.length ? 'التالي' : 'إنهاء'}
                 </button>
               </>
@@ -229,19 +305,30 @@ export default function LessonsPage() {
 
         {/* Exercises done */}
         {page === 'exercises' && exDone && lesson && (
-          <div className="text-center py-16">
+          <div className="text-center py-16 animate-slide-up">
             <div className="text-5xl mb-4">
               {score >= lesson.exercises.length * 0.8 ? '🎉' : score >= lesson.exercises.length * 0.5 ? '👍' : '💪'}
             </div>
-            <p className="text-2xl font-bold">{score} / {lesson.exercises.length}</p>
-            <p className="text-gray-400 mt-1">
+            <p
+              className="text-2xl font-bold"
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+            >
+              {score} / {lesson.exercises.length}
+            </p>
+            <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
               {score >= lesson.exercises.length * 0.8 ? 'ممتاز!' : 'تحتاج مراجعة'}
             </p>
             <div className="flex gap-3 justify-center mt-6">
-              <button onClick={() => setPage('lesson')} className="px-5 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl text-sm">
+              <button
+                onClick={() => setPage('lesson')}
+                className="btn-ghost px-5 py-2 rounded-xl text-sm"
+              >
                 راجع الدرس
               </button>
-              <button onClick={generateLesson} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm">
+              <button
+                onClick={generateLesson}
+                className="btn-gold px-5 py-2 rounded-xl text-sm"
+              >
                 درس جديد
               </button>
             </div>

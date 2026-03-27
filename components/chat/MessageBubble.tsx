@@ -1,17 +1,18 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface MessageBubbleProps {
   role: 'user' | 'assistant'
   content: string
   isStreaming: boolean
-  language?: 'turkish' | 'english'
+  language?: 'turkish'
 }
 
 const TTS_LANG: Record<string, string> = {
   turkish: 'tr-TR',
-  english: 'en-US',
 }
 
 export function MessageBubble({ role, content, isStreaming, language = 'turkish' }: MessageBubbleProps) {
@@ -83,7 +84,96 @@ export function MessageBubble({ role, content, isStreaming, language = 'turkish'
           }
           dir="auto"
         >
-          {content}
+          {isUser ? (
+            content
+          ) : (
+            <div
+              style={{
+                color: 'inherit',
+              }}
+              className="markdown-body"
+            >
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  a: ({ ...props }) => (
+                    <a
+                      {...props}
+                      style={{ color: 'var(--gold-light)', textDecoration: 'underline' }}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    />
+                  ),
+                  code: ({ className, children, ...props }) => {
+                    const isBlock = className?.includes('language-')
+                    return isBlock ? (
+                      <code
+                        className={className}
+                        style={{
+                          display: 'block',
+                          background: 'var(--bg-surface)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '6px',
+                          padding: '0.5em 0.75em',
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '0.85em',
+                          overflowX: 'auto',
+                          color: 'var(--gold-light)',
+                        }}
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    ) : (
+                      <code
+                        style={{
+                          background: 'var(--bg-surface)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '4px',
+                          padding: '0.1em 0.4em',
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '0.85em',
+                          color: 'var(--gold-light)',
+                        }}
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    )
+                  },
+                  strong: ({ ...props }) => (
+                    <strong style={{ fontWeight: 600, color: 'var(--text-primary)' }} {...props} />
+                  ),
+                  ul: ({ ...props }) => (
+                    <ul style={{ paddingRight: '1.25em', marginTop: '0.25em', marginBottom: '0.25em', listStyleType: 'disc' }} {...props} />
+                  ),
+                  ol: ({ ...props }) => (
+                    <ol style={{ paddingRight: '1.25em', marginTop: '0.25em', marginBottom: '0.25em', listStyleType: 'decimal' }} {...props} />
+                  ),
+                  li: ({ ...props }) => (
+                    <li style={{ marginBottom: '0.15em' }} {...props} />
+                  ),
+                  p: ({ ...props }) => (
+                    <p style={{ marginBottom: '0.5em', marginTop: 0 }} {...props} />
+                  ),
+                  blockquote: ({ ...props }) => (
+                    <blockquote
+                      style={{
+                        borderRight: '3px solid var(--border-gold)',
+                        paddingRight: '0.75em',
+                        marginRight: 0,
+                        color: 'var(--text-secondary)',
+                        fontStyle: 'italic',
+                      }}
+                      {...props}
+                    />
+                  ),
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            </div>
+          )}
 
           {/* Streaming indicator */}
           {isStreaming && (

@@ -66,20 +66,49 @@ export default function Home() {
           aria-hidden="true"
         />
 
-        {/* Language Cards */}
-        <div className="animate-slide-up delay-300 grid grid-cols-2 gap-3 mb-10">
-          <LanguageCard
+        {/* Start Turkish CTA */}
+        <div className="animate-slide-up delay-300 mb-10">
+          <Link
             href="/chat?language=turkish"
-            flag="🇹🇷"
-            nameAr="اللغة التركية"
-            nameLatin="Türkçe"
-          />
-          <LanguageCard
-            href="/chat?language=english"
-            flag="🇬🇧"
-            nameAr="الإنجليزية"
-            nameLatin="English"
-          />
+            className="group relative flex flex-col items-center gap-3 p-8 rounded-2xl transition-all duration-200"
+            style={{
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
+              textDecoration: 'none',
+            }}
+          >
+            {/* Hover glow */}
+            <span
+              className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+              style={{
+                background: 'var(--gold-glow)',
+                border: '1px solid var(--border-gold)',
+                borderRadius: 'inherit',
+              }}
+              aria-hidden="true"
+            />
+
+            <span className="text-5xl relative">🇹🇷</span>
+            <span
+              className="relative font-medium text-lg"
+              style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}
+            >
+              اللغة التركية
+            </span>
+            <span
+              className="relative font-mono text-sm"
+              style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
+            >
+              Türkçe
+            </span>
+
+            <span
+              className="relative text-sm font-medium px-4 py-1.5 rounded-lg transition-all duration-150"
+              style={{ color: 'var(--gold)', background: 'var(--gold-glow)', border: '1px solid var(--border-gold)' }}
+            >
+              ابدأ الآن ←
+            </span>
+          </Link>
         </div>
 
         {/* Feature pills */}
@@ -103,62 +132,5 @@ export default function Home() {
         يتعلم معك. يتذكر تقدمك.
       </p>
     </div>
-  )
-}
-
-function LanguageCard({
-  href,
-  flag,
-  nameAr,
-  nameLatin,
-}: {
-  href: string
-  flag: string
-  nameAr: string
-  nameLatin: string
-}) {
-  return (
-    <Link
-      href={href}
-      className="group relative flex flex-col items-center gap-2.5 p-5 rounded-xl transition-all duration-200"
-      style={{
-        background: 'var(--bg-surface)',
-        border: '1px solid var(--border)',
-        textDecoration: 'none',
-      }}
-    >
-      {/* Hover glow */}
-      <span
-        className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
-        style={{
-          background: 'var(--gold-glow)',
-          border: '1px solid var(--border-gold)',
-          borderRadius: 'inherit',
-        }}
-        aria-hidden="true"
-      />
-
-      <span className="text-3xl relative">{flag}</span>
-      <span
-        className="relative font-medium text-sm"
-        style={{ color: 'var(--text-primary)' }}
-      >
-        {nameAr}
-      </span>
-      <span
-        className="relative font-mono text-xs"
-        style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
-      >
-        {nameLatin}
-      </span>
-
-      {/* Arrow */}
-      <span
-        className="relative text-xs opacity-0 group-hover:opacity-100 transition-all duration-150 translate-y-1 group-hover:translate-y-0"
-        style={{ color: 'var(--gold)' }}
-      >
-        ابدأ ←
-      </span>
-    </Link>
   )
 }

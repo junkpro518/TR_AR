@@ -27,14 +27,18 @@ export default function ChatPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const lang = params.get('language') as Language
-    const resolvedLang: Language = (lang === 'turkish' || lang === 'english') ? lang : 'turkish'
+    const sessionId = params.get('session_id')
+    const resolvedLang: Language = 'turkish'
     if (resolvedLang !== language) setLanguage(resolvedLang)
 
     async function init(lang: Language) {
       try {
+        const sessionUrl = sessionId
+          ? `/api/session?id=${sessionId}`
+          : `/api/session?language=${lang}`
+
         const [sessionRes, vocabRes] = await Promise.all([
-          fetch(`/api/session?language=${lang}`),
+          fetch(sessionUrl),
           fetch(`/api/vocab?language=${lang}&known=true`),
         ])
         if (sessionRes.ok) setSession(await sessionRes.json())
@@ -133,8 +137,8 @@ export default function ChatPage() {
     }
   }, [session, language, knownVocab, goals])
 
-  const langFlag = language === 'turkish' ? '🇹🇷' : '🇬🇧'
-  const langName = language === 'turkish' ? 'التركية' : 'الإنجليزية'
+  const langFlag = '🇹🇷'
+  const langName = 'التركية'
 
   return (
     <div
@@ -180,11 +184,11 @@ export default function ChatPage() {
           {/* Right: Nav links */}
           <nav className="flex items-center gap-1">
             {[
-              { href: `/dashboard?language=${language}`, label: 'التقدم' },
-              { href: `/review?language=${language}`, label: 'مراجعة' },
-              { href: `/tasks?language=${language}&session_id=${session?.id ?? ''}`, label: 'مهام' },
-              { href: `/goals?language=${language}`, label: 'أهداف' },
-              { href: `/history?language=${language}`, label: 'سجل' },
+              { href: `/dashboard?language=turkish`, label: 'التقدم' },
+              { href: `/review?language=turkish`, label: 'مراجعة' },
+              { href: `/tasks?language=turkish&session_id=${session?.id ?? ''}`, label: 'مهام' },
+              { href: `/goals?language=turkish`, label: 'أهداف' },
+              { href: `/history?language=turkish`, label: 'سجل' },
             ].map(item => (
               <Link
                 key={item.href}

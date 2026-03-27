@@ -5,7 +5,7 @@ import { useState, KeyboardEvent, useRef, useEffect, useCallback } from 'react'
 interface InputBarProps {
   onSend: (message: string) => void
   disabled: boolean
-  language?: 'turkish' | 'english'
+  language?: 'turkish'
 }
 
 // Type shim for browsers that prefix SpeechRecognition
@@ -23,7 +23,6 @@ type SpeechRecognitionCtor = new () => {
 
 const STT_LANG: Record<string, string> = {
   turkish: 'tr-TR',
-  english: 'en-US',
 }
 
 function getSpeechRecognition(): SpeechRecognitionCtor | null {

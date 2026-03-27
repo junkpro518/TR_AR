@@ -17,6 +17,13 @@ interface DashboardData {
   achievements: Array<{ badge_id: string; badge_name: string; xp_reward: number; earned_at: string }>
 }
 
+interface WeaknessData {
+  topWeaknesses: Array<{ grammar_point: string; arabic_name: string; count: number; examples: string[] }>
+  weakVocab: string[]
+  overallAccuracy: number
+  recommendations: string[]
+}
+
 const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 
 const GRAMMAR_LABELS: Record<string, string> = {
@@ -36,6 +43,7 @@ export default function DashboardPage() {
 
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [weaknessData, setWeaknessData] = useState<WeaknessData | null>(null)
 
   useEffect(() => {
     fetch(`/api/dashboard?language=${language}`)
@@ -43,6 +51,13 @@ export default function DashboardPage() {
       .then(d => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
   }, [language])
+
+  useEffect(() => {
+    fetch('/api/weakness')
+      .then(r => r.json())
+      .then(d => setWeaknessData(d))
+      .catch(() => {})
+  }, [])
 
   if (loading) return (
     <div
@@ -244,6 +259,65 @@ export default function DashboardPage() {
                     )
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* Weakness Report */}
+            {weaknessData && weaknessData.topWeaknesses.length > 0 && (
+              <div className="card p-4 animate-slide-up delay-300" style={{ borderColor: 'var(--border-gold)' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                    نقاط الضعف
+                  </p>
+                  <span
+                    className="text-xs font-mono px-2 py-0.5 rounded-full"
+                    style={{
+                      background: weaknessData.overallAccuracy >= 70 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                      color: weaknessData.overallAccuracy >= 70 ? 'var(--green)' : 'var(--red)',
+                    }}
+                  >
+                    دقة {weaknessData.overallAccuracy}%
+                  </span>
+                </div>
+                <div className="space-y-2.5 mb-3">
+                  {weaknessData.topWeaknesses.slice(0, 3).map((item, i) => {
+                    const maxCount = weaknessData.topWeaknesses[0].count
+                    const pct = Math.max(8, (item.count / maxCount) * 100)
+                    return (
+                      <div key={item.grammar_point} className="flex items-center gap-3">
+                        <span
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                          style={{ background: 'var(--gold-glow)', color: 'var(--gold)', border: '1px solid var(--border-gold)' }}
+                        >
+                          {i + 1}
+                        </span>
+                        <span className="text-sm flex-1 truncate" style={{ color: 'var(--text-secondary)' }}>
+                          {item.arabic_name}
+                        </span>
+                        <span className="text-xs shrink-0" style={{ color: 'var(--gold)', fontFamily: 'var(--font-mono)' }}>
+                          {item.count}×
+                        </span>
+                        <div
+                          className="w-16 rounded-full h-1 shrink-0"
+                          style={{ background: 'var(--border-light)' }}
+                        >
+                          <div
+                            className="h-1 rounded-full"
+                            style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--gold-dim), var(--gold))' }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                {weaknessData.recommendations.length > 0 && (
+                  <div
+                    className="rounded-xl px-3 py-2 text-xs"
+                    style={{ background: 'var(--gold-glow)', color: 'var(--gold-light)', borderRight: '2px solid var(--gold)' }}
+                  >
+                    {weaknessData.recommendations[0]}
+                  </div>
+                )}
               </div>
             )}
 

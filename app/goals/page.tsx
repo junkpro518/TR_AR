@@ -67,28 +67,48 @@ export default function GoalsPage() {
   const done = goals.filter(g => g.completed)
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4">
-      <div className="max-w-xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => router.back()} className="text-gray-400 hover:text-white">←</button>
-          <h1 className="text-xl font-semibold">أهداف التعلم</h1>
-          <button
-            onClick={() => setShowForm(v => !v)}
-            className="ml-auto text-blue-400 hover:text-blue-300 text-sm"
-          >
-            + إضافة
-          </button>
-        </div>
+    <div className="min-h-screen" style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}>
+      {/* Header */}
+      <header
+        className="sticky top-0 z-10 flex items-center gap-3 px-5 py-4"
+        style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}
+      >
+        <button
+          onClick={() => router.back()}
+          className="text-sm transition-colors"
+          style={{ color: 'var(--text-muted)' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+        >
+          ←
+        </button>
+        <h1
+          className="font-semibold flex-1"
+          style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+        >
+          أهداف التعلم
+        </h1>
+        <button
+          onClick={() => setShowForm(v => !v)}
+          className="text-sm transition-colors"
+          style={{ color: 'var(--gold)', cursor: 'pointer' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--gold-light)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--gold)')}
+        >
+          + إضافة
+        </button>
+      </header>
+
+      <div className="max-w-xl mx-auto px-4 py-6">
 
         {/* Add form */}
         {showForm && (
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-4">
+          <div className="card p-4 mb-5 animate-slide-up">
             <input
               value={newTitle}
               onChange={e => setNewTitle(e.target.value)}
               placeholder="مثال: إتقان الأفعال الشاذة"
-              className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 text-sm"
+              className="input-field w-full rounded-lg px-3 py-2 text-sm"
               onKeyDown={e => e.key === 'Enter' && addGoal()}
               autoFocus
             />
@@ -96,13 +116,13 @@ export default function GoalsPage() {
               <button
                 onClick={addGoal}
                 disabled={adding || !newTitle.trim()}
-                className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 rounded-lg text-sm"
+                className="btn-gold flex-1 py-2 rounded-lg text-sm"
               >
                 {adding ? '...' : 'حفظ'}
               </button>
               <button
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm"
+                className="btn-ghost px-4 py-2 rounded-lg text-sm"
               >
                 إلغاء
               </button>
@@ -111,14 +131,18 @@ export default function GoalsPage() {
         )}
 
         {loading ? (
-          <div className="text-center text-gray-400 py-16">جاري التحميل...</div>
+          <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>
+            جاري التحميل...
+          </div>
         ) : goals.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-gray-400">لم تحدد أهدافًا بعد</p>
-            <p className="text-gray-600 text-sm mt-1">أضف هدفًا لتوجيه محادثاتك</p>
+          <div className="text-center py-16 animate-slide-up">
+            <p style={{ color: 'var(--text-secondary)' }}>لم تحدد أهدافًا بعد</p>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+              أضف هدفًا لتوجيه محادثاتك
+            </p>
             <button
               onClick={() => setShowForm(true)}
-              className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm"
+              className="btn-gold mt-4 px-6 py-2 rounded-xl text-sm"
             >
               أضف هدفًا
             </button>
@@ -128,35 +152,59 @@ export default function GoalsPage() {
             {/* Active goals */}
             {active.length > 0 && (
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">قيد التنفيذ ({active.length})</p>
+                <p
+                  className="text-xs uppercase tracking-wide mb-2"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  قيد التنفيذ ({active.length})
+                </p>
                 <div className="space-y-2">
                   {active.map(goal => (
-                    <div key={goal.id} className="bg-gray-900 border border-gray-700 rounded-xl p-4">
+                    <div key={goal.id} className="card p-4 animate-slide-up">
                       <div className="flex items-start gap-3">
                         <button
                           onClick={() => toggleComplete(goal)}
-                          className="mt-0.5 w-5 h-5 rounded-full border-2 border-gray-500 hover:border-green-400 shrink-0 flex items-center justify-center"
+                          className="mt-0.5 w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-all"
+                          style={{
+                            border: '2px solid var(--border-light)',
+                            background: 'transparent',
+                            cursor: 'pointer',
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--green)')}
+                          onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-light)')}
+                          title="وضع علامة مكتمل"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-200">{goal.title}</p>
+                          <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                            {goal.title}
+                          </p>
                           {goal.is_auto && (
-                            <span className="text-xs text-blue-400">تلقائي</span>
+                            <span className="badge badge-gold text-xs mt-1">تلقائي</span>
                           )}
                           {goal.progress > 0 && (
                             <div className="mt-2">
-                              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                              <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--text-muted)' }}>
                                 <span>التقدم</span>
-                                <span>{goal.progress}%</span>
+                                <span style={{ color: 'var(--gold)' }}>{goal.progress}%</span>
                               </div>
-                              <div className="w-full bg-gray-800 rounded-full h-1">
-                                <div className="bg-blue-500 h-1 rounded-full" style={{ width: `${goal.progress}%` }} />
+                              <div className="w-full rounded-full h-1" style={{ background: 'var(--border-light)' }}>
+                                <div
+                                  className="h-1 rounded-full transition-all"
+                                  style={{
+                                    width: `${goal.progress}%`,
+                                    background: 'linear-gradient(90deg, var(--gold-dim), var(--gold))',
+                                  }}
+                                />
                               </div>
                             </div>
                           )}
                         </div>
                         <button
                           onClick={() => deleteGoal(goal.id)}
-                          className="text-gray-600 hover:text-red-400 text-sm shrink-0"
+                          className="text-sm shrink-0 transition-colors"
+                          style={{ color: 'var(--text-muted)', cursor: 'pointer' }}
+                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                         >
                           ✕
                         </button>
@@ -170,22 +218,46 @@ export default function GoalsPage() {
             {/* Completed goals */}
             {done.length > 0 && (
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">مكتملة ({done.length})</p>
+                <p
+                  className="text-xs uppercase tracking-wide mb-2"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  مكتملة ({done.length})
+                </p>
                 <div className="space-y-2">
                   {done.map(goal => (
-                    <div key={goal.id} className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 opacity-60">
+                    <div
+                      key={goal.id}
+                      className="rounded-xl p-4"
+                      style={{
+                        background: 'var(--bg-surface)',
+                        border: '1px solid var(--border)',
+                        opacity: 0.6,
+                      }}
+                    >
                       <div className="flex items-center gap-3">
-                        <span className="text-green-500 text-sm">✓</span>
-                        <p className="text-sm text-gray-400 line-through flex-1">{goal.title}</p>
+                        <span className="text-sm" style={{ color: 'var(--green)' }}>✓</span>
+                        <p
+                          className="text-sm flex-1 line-through"
+                          style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}
+                        >
+                          {goal.title}
+                        </p>
                         <button
                           onClick={() => toggleComplete(goal)}
-                          className="text-xs text-gray-600 hover:text-gray-400"
+                          className="text-xs transition-colors"
+                          style={{ color: 'var(--text-muted)', cursor: 'pointer' }}
+                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                         >
                           استعادة
                         </button>
                         <button
                           onClick={() => deleteGoal(goal.id)}
-                          className="text-gray-700 hover:text-red-400 text-sm"
+                          className="text-sm transition-colors"
+                          style={{ color: 'var(--text-muted)', cursor: 'pointer' }}
+                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                         >
                           ✕
                         </button>

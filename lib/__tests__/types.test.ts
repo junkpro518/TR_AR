@@ -4,7 +4,7 @@ import type { Language, CEFRLevel, Message, Session, VocabCard, FeedbackItem } f
 describe('Types', () => {
   it('Language type accepts valid values', () => {
     const lang: Language = 'turkish'
-    expect(['turkish', 'english']).toContain(lang)
+    expect(['turkish']).toContain(lang)
   })
 
   it('CEFRLevel type accepts valid values', () => {
