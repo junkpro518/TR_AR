@@ -184,6 +184,7 @@ export default function ChatPage() {
               { href: `/review?language=${language}`, label: 'مراجعة' },
               { href: `/tasks?language=${language}&session_id=${session?.id ?? ''}`, label: 'مهام' },
               { href: `/goals?language=${language}`, label: 'أهداف' },
+              { href: `/history?language=${language}`, label: 'سجل' },
             ].map(item => (
               <Link
                 key={item.href}
@@ -252,6 +253,7 @@ export default function ChatPage() {
               key={msg.id}
               role={msg.role}
               content={msg.content}
+              language={language}
               isStreaming={isLoading && idx === messages.length - 1 && msg.role === 'assistant'}
             />
           ))}
@@ -280,7 +282,7 @@ export default function ChatPage() {
         </main>
 
         {/* Input */}
-        <InputBar onSend={sendMessage} disabled={isLoading || !session} />
+        <InputBar onSend={sendMessage} disabled={isLoading || !session} language={language} />
       </div>
 
       {/* ─── Feedback Sidebar (desktop) ─── */}
