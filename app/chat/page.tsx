@@ -13,6 +13,74 @@ interface ChatMessage {
   content: string
 }
 
+function MoreMenu({ language, session }: { language: string; session: { id: string } | null }) {
+  const [open, setOpen] = useState(false)
+
+  const links = [
+    { href: `/review?language=${language}`, label: 'مراجعة SRS' },
+    { href: `/tasks?language=${language}&session_id=${session?.id ?? ''}`, label: 'مهام' },
+    { href: `/lessons?language=${language}`, label: 'دروس' },
+    { href: `/goals?language=${language}`, label: 'أهداف' },
+    { href: '/vocab-tracker', label: 'مفرداتي' },
+    { href: '/quick-ask', label: 'سؤال سريع' },
+  ]
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="px-2.5 py-1 rounded-lg text-xs"
+        style={{
+          color: open ? 'var(--gold-light)' : 'var(--text-muted)',
+          background: open ? 'var(--gold-glow)' : 'transparent',
+          border: `1px solid ${open ? 'var(--border-gold)' : 'transparent'}`,
+        }}
+      >
+        المزيد ▾
+      </button>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+            onClick={() => setOpen(false)}
+          />
+          {/* Dropdown */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              marginTop: '4px',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-light)',
+              borderRadius: '12px',
+              padding: '4px',
+              zIndex: 50,
+              minWidth: '140px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            }}
+          >
+            {links.map(item => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className="block px-3 py-2 rounded-lg text-xs transition-colors"
+                style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--bg-raised)' }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent' }}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function ChatPage() {
   const [language, setLanguage] = useState<Language>('turkish')
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -182,48 +250,33 @@ export default function ChatPage() {
           </div>
 
           {/* Right: Nav links */}
+          {/* Nav - desktop shows all, mobile shows dropdown for overflow */}
           <nav className="flex items-center gap-1">
+            {/* Always visible links */}
             {[
-              { href: `/dashboard?language=turkish`, label: 'التقدم' },
-              { href: `/review?language=turkish`, label: 'مراجعة' },
-              { href: `/tasks?language=turkish&session_id=${session?.id ?? ''}`, label: 'مهام' },
-              { href: `/goals?language=turkish`, label: 'أهداف' },
+              { href: `/dashboard?language=turkish`, label: '📊' },
               { href: `/history?language=turkish`, label: 'سجل' },
-              { href: '/vocab-tracker', label: 'مفرداتي' },
-              { href: '/quick-ask', label: 'سؤال سريع' },
-              { href: '/settings', label: 'إعدادات' },
+              { href: '/settings', label: '⚙️' },
             ].map(item => (
-              <Link
-                key={item.href}
-                href={item.href}
+              <Link key={item.href} href={item.href}
                 className="px-2.5 py-1 rounded-lg text-xs transition-colors"
-                style={{
-                  color: 'var(--text-muted)',
-                  textDecoration: 'none',
-                  background: 'transparent',
-                }}
-                onMouseEnter={e => {
-                  (e.target as HTMLElement).style.color = 'var(--text-primary)'
-                  ;(e.target as HTMLElement).style.background = 'var(--bg-raised)'
-                }}
-                onMouseLeave={e => {
-                  (e.target as HTMLElement).style.color = 'var(--text-muted)'
-                  ;(e.target as HTMLElement).style.background = 'transparent'
-                }}
-              >
+                style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--bg-raised)' }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-muted)'; (e.target as HTMLElement).style.background = 'transparent' }}>
                 {item.label}
               </Link>
             ))}
 
+            {/* More dropdown */}
+            <MoreMenu language={language} session={session} />
+
             {/* Mobile sidebar toggle */}
             <button
-              className="md:hidden px-2.5 py-1 rounded-lg text-xs transition-colors"
+              className="md:hidden px-2.5 py-1 rounded-lg text-xs"
               style={{ color: 'var(--text-muted)', background: 'transparent' }}
               onClick={() => setSidebarOpen(v => !v)}
               aria-label="عرض التغذية الراجعة"
-            >
-              ◧
-            </button>
+            >◧</button>
           </nav>
         </header>
 
