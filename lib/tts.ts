@@ -6,19 +6,21 @@
  *  - Natural prosody, emotional expression
  *  - API endpoint: https://api.mistral.ai/v1/audio/speech (when available)
  *  - Outperforms ElevenLabs v2.5 Flash on native speaker evaluations
- *  - To enable: add MISTRAL_API_KEY to .env.local
+ *  - To enable: add MISTRAL_API_KEY to .env.local or via /setup page
  *
  * Setup:
  * 1. Get API key from https://console.mistral.ai
- * 2. Add MISTRAL_API_KEY=your_key to .env.local
+ * 2. Add MISTRAL_API_KEY=your_key to .env.local or save via /setup
  * 3. TTS will automatically use Voxtral when the key is present
  */
+
+import { getSecret } from './secrets-loader'
 
 export async function generateVoxtralAudio(
   text: string,
   language: 'tr' | 'ar' = 'tr'
 ): Promise<ArrayBuffer | null> {
-  const apiKey = process.env.MISTRAL_API_KEY
+  const apiKey = await getSecret('MISTRAL_API_KEY')
   if (!apiKey) return null
 
   try {
