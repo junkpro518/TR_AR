@@ -68,6 +68,13 @@ const FIELDS: FieldConfig[] = [
     link: { url: 'https://serper.dev', text: 'احصل على مفتاح' },
     type: 'password' as const,
   },
+  {
+    key: 'APP_URL',
+    label: 'رابط التطبيق (لـ Webhook)',
+    placeholder: 'https://your-app.vercel.app',
+    hint: 'الرابط الكامل للتطبيق — مطلوب لتسجيل Telegram Webhook (يجب أن يبدأ بـ https://)',
+    type: 'text' as const,
+  },
 ]
 
 export default function SetupPage() {
@@ -83,6 +90,9 @@ export default function SetupPage() {
   const [telegramResult, setTelegramResult] = useState<string | null>(null)
   const [registeringWebhook, setRegisteringWebhook] = useState(false)
   const [webhookResult, setWebhookResult] = useState<string | null>(null)
+  const [clearingData, setClearingData] = useState(false)
+  const [clearResult, setClearResult] = useState<string | null>(null)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   useEffect(() => {
     fetch('/api/setup')
@@ -127,6 +137,24 @@ export default function SetupPage() {
       setTelegramResult('❌ فشل الاتصال بالخادم')
     }
     setTestingTelegram(false)
+  }
+
+  async function clearAllData() {
+    setClearingData(true)
+    setClearResult(null)
+    setShowClearConfirm(false)
+    try {
+      const res = await fetch('/api/admin/clear-data', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) {
+        setClearResult('✅ تم تفريغ قاعدة البيانات بنجاح')
+      } else {
+        setClearResult('❌ ' + (data.error ?? 'خطأ غير معروف'))
+      }
+    } catch {
+      setClearResult('❌ فشل الاتصال بالخادم')
+    }
+    setClearingData(false)
   }
 
   async function registerWebhook() {
@@ -297,6 +325,55 @@ export default function SetupPage() {
           {webhookResult && (
             <p className="text-xs mt-2 text-center" style={{ color: webhookResult.startsWith('✅') ? 'var(--green)' : 'var(--red)' }}>
               {webhookResult}
+            </p>
+          )}
+        </div>
+
+        {/* Clear Data */}
+        <div className="card p-4">
+          <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--red, #b84848)' }}>
+            🗑 تفريغ قاعدة البيانات
+          </h2>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+            يحذف جميع الجلسات والرسائل والمفردات والأهداف والمهام. مفيد بعد الاختبار للبدء من الصفر.
+          </p>
+          {!showClearConfirm ? (
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              disabled={clearingData}
+              className="btn-ghost w-full py-2.5 rounded-xl text-sm"
+              style={{ color: 'var(--red, #b84848)', borderColor: 'rgba(184,72,72,0.3)' }}
+            >
+              🗑 تفريغ جميع البيانات
+            </button>
+          ) : (
+            <div className="p-3 rounded-xl" style={{ background: 'rgba(184,72,72,0.1)', border: '1px solid rgba(184,72,72,0.3)' }}>
+              <p className="text-xs mb-3 text-center" style={{ color: 'var(--red, #b84848)' }}>
+                ⚠️ هذا الإجراء لا يمكن التراجع عنه. هل أنت متأكد؟
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={clearAllData}
+                  disabled={clearingData}
+                  className="flex-1 py-2 rounded-xl text-sm font-semibold"
+                  style={{ background: 'rgba(184,72,72,0.8)', color: '#fff', border: 'none', cursor: 'pointer' }}
+                >
+                  {clearingData ? 'جاري الحذف...' : 'نعم، احذف كل شيء'}
+                </button>
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  className="flex-1 py-2 rounded-xl text-sm btn-ghost"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          )}
+          {clearResult && (
+            <p className="text-xs mt-2 text-center" style={{
+              color: clearResult.startsWith('✅') ? 'var(--green)' : 'var(--red, #b84848)'
+            }}>
+              {clearResult}
             </p>
           )}
         </div>

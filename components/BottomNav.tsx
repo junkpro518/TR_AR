@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { href: '/chat', icon: '💬', label: 'محادثة' },
   { href: '/tasks', icon: '📋', label: 'مهام' },
   { href: '/goals', icon: '🎯', label: 'أهداف' },
+  { href: '/history', icon: '📜', label: 'سجل' },
   { href: '/dashboard', icon: '📊', label: 'لوحة' },
   { href: '/settings', icon: '⚙️', label: 'إعدادات' },
 ]

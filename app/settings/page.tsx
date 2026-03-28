@@ -188,12 +188,44 @@ export default function SettingsPage() {
           body: JSON.stringify({ key, proposed_value: value, change_description: description }),
         })
         if (!res.ok) throw new Error('proposal failed')
+        const data = await res.json()
+        // إذا لم يُرسَل لـ Telegram (غير مضبوط)، احفظ مباشرة وأزل حالة الانتظار
+        if (data.ok && !data.telegram_sent) {
+          await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key, value }),
+          })
+          // إلغاء الانتظار مباشرة لأنه لا يوجد Telegram للموافقة
+          await fetch('/api/settings/cancel-pending', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key }),
+          })
+          setPending(p => ({ ...p, [key]: false }))
+          setSaveStatus('saved')
+          setTimeout(() => setSaveStatus('idle'), 2000)
+        }
       } catch {
         setPending(p => ({ ...p, [key]: false }))
       }
     },
     []
   )
+
+  // ── Cancel pending proposal ──────────────────────────────────────────────────
+  const cancelPending = useCallback(async (key: keyof TeacherSettings) => {
+    try {
+      await fetch('/api/settings/cancel-pending', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key }),
+      })
+      setPending(p => ({ ...p, [key]: false }))
+    } catch {
+      // صامت
+    }
+  }, [])
 
   // ── User setting handlers ───────────────────────────────────────────────────
   function handleTopicToggle(topic: string) {
@@ -474,6 +506,7 @@ export default function SettingsPage() {
             <SettingCard
               label={TEACHER_SETTING_LABELS.response_style}
               pendingBadge={pending.response_style}
+              onCancelPending={() => cancelPending('response_style')}
             >
               <div className="flex gap-2 flex-wrap">
                 {(['casual', 'formal'] as ResponseStyle[]).map(style => (
@@ -506,6 +539,7 @@ export default function SettingsPage() {
             <SettingCard
               label={TEACHER_SETTING_LABELS.correction_strictness}
               pendingBadge={pending.correction_strictness}
+              onCancelPending={() => cancelPending('correction_strictness')}
             >
               <div className="flex flex-col gap-2">
                 {(['gentle', 'moderate', 'strict'] as CorrectionStrictness[]).map(s => (
@@ -539,6 +573,7 @@ export default function SettingsPage() {
             <SettingCard
               label={TEACHER_SETTING_LABELS.vocab_rate}
               pendingBadge={pending.vocab_rate}
+              onCancelPending={() => cancelPending('vocab_rate')}
             >
               <div className="flex flex-col gap-2">
                 {(['slow', 'medium', 'fast'] as VocabRate[]).map(r => (
@@ -572,6 +607,7 @@ export default function SettingsPage() {
             <SettingCard
               label={TEACHER_SETTING_LABELS.focus_areas}
               pendingBadge={pending.focus_areas}
+              onCancelPending={() => cancelPending('focus_areas')}
             >
               <div className="flex flex-wrap gap-2">
                 {(Object.keys(FOCUS_AREA_LABELS) as FocusArea[]).map(area => (
@@ -596,7 +632,7 @@ export default function SettingsPage() {
             </SettingCard>
 
             {/* Language Mix */}
-            <SettingCard label="مزيج اللغتين" pendingBadge={pending.teaching_language_mix}>
+            <SettingCard label="مزيج اللغتين" pendingBadge={pending.teaching_language_mix} onCancelPending={() => cancelPending('teaching_language_mix')}>
               <div className="flex flex-col gap-2">
                 {(['arabic_heavy', 'balanced', 'turkish_heavy'] as const).map(mix => (
                   <button
@@ -616,7 +652,7 @@ export default function SettingsPage() {
             </SettingCard>
 
             {/* Quiz Frequency */}
-            <SettingCard label="تكرار الاختبارات" pendingBadge={pending.quiz_frequency}>
+            <SettingCard label="تكرار الاختبارات" pendingBadge={pending.quiz_frequency} onCancelPending={() => cancelPending('quiz_frequency')}>
               <div className="flex flex-col gap-2">
                 {(['never', 'sometimes', 'often'] as const).map(freq => (
                   <button
@@ -639,6 +675,7 @@ export default function SettingsPage() {
             <SettingCard
               label={TEACHER_SETTING_LABELS.custom_instructions}
               pendingBadge={pending.custom_instructions}
+              onCancelPending={() => cancelPending('custom_instructions')}
             >
               <textarea
                 className="input-field w-full text-sm resize-none"
@@ -693,11 +730,13 @@ function SettingCard({
   label,
   hint,
   pendingBadge,
+  onCancelPending,
   children,
 }: {
   label: string
   hint?: string
   pendingBadge?: boolean
+  onCancelPending?: () => void
   children: React.ReactNode
 }) {
   return (
@@ -717,16 +756,35 @@ function SettingCard({
           )}
         </div>
         {pendingBadge && (
-          <span
-            className="text-xs px-2 py-0.5 rounded-full shrink-0"
-            style={{
-              background: 'rgba(212,175,55,0.15)',
-              color: 'var(--gold)',
-              border: '1px solid rgba(212,175,55,0.3)',
-            }}
-          >
-            في انتظار موافقة المعلم
-          </span>
+          <div className="flex items-center gap-1 shrink-0">
+            <span
+              className="text-xs px-2 py-0.5 rounded-full"
+              style={{
+                background: 'rgba(212,175,55,0.15)',
+                color: 'var(--gold)',
+                border: '1px solid rgba(212,175,55,0.3)',
+              }}
+            >
+              في انتظار موافقة
+            </span>
+            {onCancelPending && (
+              <button
+                onClick={onCancelPending}
+                title="إلغاء الانتظار"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  fontSize: '0.9rem',
+                  lineHeight: 1,
+                  padding: '2px 4px',
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
         )}
       </div>
       {children}

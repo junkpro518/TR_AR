@@ -5,13 +5,17 @@ import { getSecret } from '@/lib/secrets-loader'
 // يسجّل عنوان webhook مع Telegram حتى تصل ردود الأزرار للتطبيق
 export async function POST() {
   const BOT_TOKEN = await getSecret('TELEGRAM_BOT_TOKEN')
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL
+  // Try secrets DB first, then env var
+  const APP_URL = (await getSecret('APP_URL')) || process.env.NEXT_PUBLIC_APP_URL
 
   if (!BOT_TOKEN) {
     return NextResponse.json({ ok: false, error: 'TELEGRAM_BOT_TOKEN غير مضبوط' }, { status: 400 })
   }
   if (!APP_URL) {
-    return NextResponse.json({ ok: false, error: 'NEXT_PUBLIC_APP_URL غير مضبوط في البيئة' }, { status: 400 })
+    return NextResponse.json({ ok: false, error: 'رابط التطبيق (APP_URL) غير مضبوط — أضفه في صفحة الإعداد' }, { status: 400 })
+  }
+  if (!APP_URL.startsWith('https://')) {
+    return NextResponse.json({ ok: false, error: 'رابط التطبيق يجب أن يبدأ بـ https:// — Telegram يتطلب HTTPS' }, { status: 400 })
   }
 
   const webhookUrl = `${APP_URL}/api/telegram`

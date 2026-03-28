@@ -260,25 +260,9 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Right: Nav links */}
-          {/* Nav - desktop shows all, mobile shows dropdown for overflow */}
+          {/* Right: secondary links + mobile feedback toggle */}
           <nav className="flex items-center gap-1">
-            {/* Always visible links */}
-            {[
-              { href: `/dashboard?language=turkish`, label: '📊' },
-              { href: `/history?language=turkish`, label: 'سجل' },
-              { href: '/settings', label: '⚙️' },
-            ].map(item => (
-              <Link key={item.href} href={item.href}
-                className="px-2.5 py-1 rounded-lg text-xs transition-colors"
-                style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--bg-raised)' }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-muted)'; (e.target as HTMLElement).style.background = 'transparent' }}>
-                {item.label}
-              </Link>
-            ))}
-
-            {/* More dropdown */}
+            {/* Secondary pages not in BottomNav */}
             <MoreMenu language={language} session={session} />
 
             {/* Mobile sidebar toggle */}
