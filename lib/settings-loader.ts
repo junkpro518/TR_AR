@@ -6,6 +6,8 @@ export interface TeacherConfig {
   vocab_intro_rate: 'slow' | 'medium' | 'fast'
   focus_areas: string[]
   custom_instructions: string
+  teaching_language_mix?: 'arabic_heavy' | 'balanced' | 'turkish_heavy'
+  quiz_frequency?: 'never' | 'sometimes' | 'often'
 }
 
 export interface UserConfig {

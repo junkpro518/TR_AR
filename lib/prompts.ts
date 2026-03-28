@@ -214,12 +214,27 @@ export function buildSystemPromptFromContext(
     ? `\nالموضوعات المفضلة للطالب (وجّه المحادثة نحوها): ${preferredTopics.join('، ')}`
     : ''
 
+  const ctxLines: string[] = []
+  if (teacherConfig?.teaching_language_mix === 'arabic_heavy') {
+    ctxLines.push('- اشرح كل شيء بالعربية أولاً ثم قدّم التركية كأمثلة')
+  } else if (teacherConfig?.teaching_language_mix === 'turkish_heavy') {
+    ctxLines.push('- تحدث بالتركية أكثر واشرح بالعربية فقط عند الضرورة')
+  }
+
+  if (teacherConfig?.quiz_frequency === 'often') {
+    ctxLines.push('- أضف كويز [QUIZ] بعد شرح كل قاعدة جديدة')
+  } else if (teacherConfig?.quiz_frequency === 'never') {
+    ctxLines.push('- لا تضف أي كويز في ردودك')
+  }
+
+  const teacherAdaptationsCtx = ctxLines.length > 0 ? '\n' + ctxLines.join('\n') : ''
+
   const customSection = teacherConfig?.custom_instructions
     ? `\nتعليمات خاصة: ${teacherConfig.custom_instructions}`
     : ''
 
   return `أنت معلم تركية دافئ ومشجع (مستوى CEFR ${level}) تحادث طالبك بالعربية والتركية معاً.
-${CEFR_INSTRUCTIONS_AR[level]}${errorSection}${vocabSection}${goalSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${customSection}
+${CEFR_INSTRUCTIONS_AR[level]}${errorSection}${vocabSection}${goalSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${teacherAdaptationsCtx}${customSection}
 
 قواعد:
 - استخدم 80% مفردات مألوفة + 20% كلمات جديدة مع شرح قصير في السياق

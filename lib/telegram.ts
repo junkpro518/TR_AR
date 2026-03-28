@@ -42,9 +42,10 @@ export async function sendTelegramMessage(
   )
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}))
-    console.error('[Telegram] sendMessage failed:', res.status, errBody)
+    console.error('[Telegram] sendMessage failed:', res.status, JSON.stringify(errBody))
+    return false
   }
-  return res.ok
+  return true
 }
 
 export async function answerCallbackQuery(
