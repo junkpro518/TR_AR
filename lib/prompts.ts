@@ -45,6 +45,8 @@ interface PromptParams {
   session_summaries?: SessionSummary[]
   total_session_count?: number
   total_learning_days?: number
+  // Custom system prompt base (overrides default intro)
+  system_prompt_base?: string
 }
 
 function buildMemorySection(
@@ -148,7 +150,12 @@ export function buildSystemPrompt(params: PromptParams): string {
     params.total_learning_days,
   )
 
-  return `أنت معلم لغة تركية دافئ ومشجع تحادث طالبك بالعربية والتركية معاً.
+  // Base text: يمكن تجاوزه بإعداد مخصص
+  const baseIntro = params.system_prompt_base && params.system_prompt_base.trim()
+    ? params.system_prompt_base.trim()
+    : `أنت معلم لغة تركية دافئ ومشجع تحادث طالبك بالعربية والتركية معاً.`
+
+  return `${baseIntro}
 
 مستوى CEFR: ${params.cefr_level}
 ${CEFR_INSTRUCTIONS_AR[params.cefr_level]}
@@ -201,7 +208,12 @@ CORRECT: A
 - لا تضع أكثر من كويز واحد في الرد
 - الكويز يجب أن يكون في نهاية ردك
 - استخدمه بعد شرح القاعدة لا قبله
-- 3-4 خيارات فقط`
+- 3-4 خيارات فقط
+
+## اقتراح تعديل على System Prompt (للمعلم فقط)
+إذا لاحظت أن تعليماتك تحتاج تحسيناً (مثلاً: توجيه أفضل لمستواك أو أسلوب أفضل)، يمكنك اقتراح نص جديد:
+[SUGGEST_PROMPT: النص الجديد المقترح هنا]
+ملاحظة: استخدم هذا نادراً جداً — فقط عند اكتشاف ثغرة تعليمية حقيقية تكررت.`
 }
 
 /**

@@ -13,73 +13,6 @@ interface ChatMessage {
   content: string
 }
 
-function MoreMenu({ language, session }: { language: string; session: { id: string } | null }) {
-  const [open, setOpen] = useState(false)
-
-  const links = [
-    { href: `/review?language=${language}`, label: 'مراجعة SRS' },
-    { href: `/tasks?language=${language}&session_id=${session?.id ?? ''}`, label: 'مهام' },
-    { href: `/lessons?language=${language}`, label: 'دروس' },
-    { href: `/goals?language=${language}`, label: 'أهداف' },
-    { href: '/vocab-tracker', label: 'مفرداتي' },
-    { href: '/quick-ask', label: 'سؤال سريع' },
-  ]
-
-  return (
-    <div style={{ position: 'relative' }}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="px-2.5 py-1 rounded-lg text-xs"
-        style={{
-          color: open ? 'var(--gold-light)' : 'var(--text-muted)',
-          background: open ? 'var(--gold-glow)' : 'transparent',
-          border: `1px solid ${open ? 'var(--border-gold)' : 'transparent'}`,
-        }}
-      >
-        المزيد ▾
-      </button>
-      {open && (
-        <>
-          {/* Backdrop */}
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 40 }}
-            onClick={() => setOpen(false)}
-          />
-          {/* Dropdown */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              marginTop: '4px',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-light)',
-              borderRadius: '12px',
-              padding: '4px',
-              zIndex: 50,
-              minWidth: '140px',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-            }}
-          >
-            {links.map(item => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="block px-3 py-2 rounded-lg text-xs transition-colors"
-                style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--bg-raised)' }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent' }}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
 
 export default function ChatPage() {
   const [language, setLanguage] = useState<Language>('turkish')
@@ -221,8 +154,8 @@ export default function ChatPage() {
 
   return (
     <div
-      className="flex h-screen"
-      style={{ background: 'var(--bg-base)' }}
+      className="flex"
+      style={{ background: 'var(--bg-base)', height: 'calc(100dvh - 64px)' }}
     >
       {/* ─── Main Chat Column ─── */}
       <div className="flex flex-col flex-1 min-w-0">
@@ -260,11 +193,8 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Right: secondary links + mobile feedback toggle */}
+          {/* Right: mobile feedback toggle */}
           <nav className="flex items-center gap-1">
-            {/* Secondary pages not in BottomNav */}
-            <MoreMenu language={language} session={session} />
-
             {/* Mobile sidebar toggle */}
             <button
               className="md:hidden px-2.5 py-1 rounded-lg text-xs"

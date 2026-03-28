@@ -24,15 +24,37 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServerClient()
 
-  // Insert proposal record
-  const { data: proposal, error: proposalError } = await supabase
+  // احفظ القيمة الحالية قبل التغيير (للتراجع عند الرفض)
+  const { data: currentSetting } = await supabase
+    .from('settings')
+    .select('value')
+    .eq('key', key)
+    .single()
+
+  let proposal: { id: string } | null = null
+
+  // محاولة تخزين القيمة القديمة مع الاقتراح (للتراجع عند الرفض)
+  const { data: p1, error: e1 } = await supabase
     .from('pending_proposals')
-    .insert({ key, proposed_value, status: 'pending' })
+    .insert({ key, proposed_value, old_value: currentSetting?.value ?? null, status: 'pending' })
     .select('id')
     .single()
 
-  if (proposalError || !proposal) {
+  if (e1 && (e1.code === '42703' || e1.message?.includes('old_value'))) {
+    // العمود غير موجود — احفظ بدونه
+    const { data: p2, error: proposalError } = await supabase
+      .from('pending_proposals')
+      .insert({ key, proposed_value, status: 'pending' })
+      .select('id')
+      .single()
+    if (proposalError || !p2) {
+      return NextResponse.json({ error: 'Failed to create proposal' }, { status: 500 })
+    }
+    proposal = p2
+  } else if (e1 || !p1) {
     return NextResponse.json({ error: 'Failed to create proposal' }, { status: 500 })
+  } else {
+    proposal = p1
   }
 
   // Mark current setting as pending (upsert so it works even if row doesn't exist yet)

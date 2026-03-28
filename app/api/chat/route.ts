@@ -247,6 +247,25 @@ export async function POST(request: NextRequest) {
             ).catch(() => {}) // fire-and-forget
           }
 
+          // استخرج SUGGEST_PROMPT marker إذا وجد (اقتراح تعديل على System Prompt)
+          const suggestPromptMatch = cleanResponse.match(/\[SUGGEST_PROMPT:\s*([\s\S]+?)\]/)
+          if (suggestPromptMatch) {
+            const suggestion = suggestPromptMatch[1].trim()
+            cleanResponse = cleanResponse.replace(suggestPromptMatch[0], '').trim()
+            // أرسل الاقتراح إلى Telegram للموافقة (fire-and-forget)
+            Promise.resolve(
+              fetch(new URL('/api/settings/telegram-proposal', request.url).href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  key: 'system_prompt_base',
+                  proposed_value: suggestion,
+                  change_description: `💡 اقتراح من المعلم لتعديل الـ System Prompt:\n\n"${suggestion.slice(0, 200)}${suggestion.length > 200 ? '...' : ''}"`,
+                }),
+              })
+            ).catch(() => {})
+          }
+
           // احذف QUIZ blocks من النص المحفوظ (الـ UI يُعيد بناءها)
           // لكن أبقِها في cleanResponse الذي يُرسَل للـ client
           // فقط في الرسالة المحفوظة في DB، احذف الـ quiz

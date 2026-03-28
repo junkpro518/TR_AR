@@ -30,6 +30,7 @@ interface TeacherSettings {
   custom_instructions: string
   teaching_language_mix: TeachingLanguageMix
   quiz_frequency: QuizFrequency
+  system_prompt_base: string
 }
 
 interface PendingState {
@@ -105,6 +106,7 @@ const DEFAULT_TEACHER: TeacherSettings = {
   custom_instructions: '',
   teaching_language_mix: 'balanced',
   quiz_frequency: 'sometimes',
+  system_prompt_base: '',
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -115,6 +117,8 @@ export default function SettingsPage() {
   const [pending, setPending] = useState<PendingState>({})
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [initialized, setInitialized] = useState(false)
+  const [promptPreview, setPromptPreview] = useState<string | null>(null)
+  const [loadingPrompt, setLoadingPrompt] = useState(false)
 
   // ── Load settings on mount ──────────────────────────────────────────────────
   useEffect(() => {
@@ -149,6 +153,7 @@ export default function SettingsPage() {
           custom_instructions: data.custom_instructions?.value ?? data.custom_instructions ?? '',
           teaching_language_mix: data.teaching_language_mix?.value ?? data.teaching_language_mix ?? 'balanced',
           quiz_frequency: data.quiz_frequency?.value ?? data.quiz_frequency ?? 'sometimes',
+          system_prompt_base: data.system_prompt_base?.value ?? data.system_prompt_base ?? '',
         }))
       } catch {
         // Silently use defaults if settings haven't been set yet
@@ -226,6 +231,34 @@ export default function SettingsPage() {
       // صامت
     }
   }, [])
+
+  // ── Direct apply (bypass Telegram approval) ─────────────────────────────────
+  const directApply = useCallback(async (key: keyof TeacherSettings) => {
+    try {
+      await fetch('/api/settings/cancel-pending', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key }),
+      })
+      setPending(p => ({ ...p, [key]: false }))
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 2000)
+    } catch {
+      // صامت
+    }
+  }, [])
+
+  async function loadPromptPreview() {
+    setLoadingPrompt(true)
+    try {
+      const res = await fetch('/api/settings/preview-prompt')
+      const data = await res.json()
+      setPromptPreview(data.prompt)
+    } catch {
+      setPromptPreview('❌ فشل تحميل الـ Prompt')
+    }
+    setLoadingPrompt(false)
+  }
 
   // ── User setting handlers ───────────────────────────────────────────────────
   function handleTopicToggle(topic: string) {
@@ -507,6 +540,7 @@ export default function SettingsPage() {
               label={TEACHER_SETTING_LABELS.response_style}
               pendingBadge={pending.response_style}
               onCancelPending={() => cancelPending('response_style')}
+              onDirectApply={() => directApply('response_style')}
             >
               <div className="flex gap-2 flex-wrap">
                 {(['casual', 'formal'] as ResponseStyle[]).map(style => (
@@ -540,6 +574,7 @@ export default function SettingsPage() {
               label={TEACHER_SETTING_LABELS.correction_strictness}
               pendingBadge={pending.correction_strictness}
               onCancelPending={() => cancelPending('correction_strictness')}
+              onDirectApply={() => directApply('correction_strictness')}
             >
               <div className="flex flex-col gap-2">
                 {(['gentle', 'moderate', 'strict'] as CorrectionStrictness[]).map(s => (
@@ -574,6 +609,7 @@ export default function SettingsPage() {
               label={TEACHER_SETTING_LABELS.vocab_rate}
               pendingBadge={pending.vocab_rate}
               onCancelPending={() => cancelPending('vocab_rate')}
+              onDirectApply={() => directApply('vocab_rate')}
             >
               <div className="flex flex-col gap-2">
                 {(['slow', 'medium', 'fast'] as VocabRate[]).map(r => (
@@ -608,6 +644,7 @@ export default function SettingsPage() {
               label={TEACHER_SETTING_LABELS.focus_areas}
               pendingBadge={pending.focus_areas}
               onCancelPending={() => cancelPending('focus_areas')}
+              onDirectApply={() => directApply('focus_areas')}
             >
               <div className="flex flex-wrap gap-2">
                 {(Object.keys(FOCUS_AREA_LABELS) as FocusArea[]).map(area => (
@@ -632,7 +669,7 @@ export default function SettingsPage() {
             </SettingCard>
 
             {/* Language Mix */}
-            <SettingCard label="مزيج اللغتين" pendingBadge={pending.teaching_language_mix} onCancelPending={() => cancelPending('teaching_language_mix')}>
+            <SettingCard label="مزيج اللغتين" pendingBadge={pending.teaching_language_mix} onCancelPending={() => cancelPending('teaching_language_mix')} onDirectApply={() => directApply('teaching_language_mix')}>
               <div className="flex flex-col gap-2">
                 {(['arabic_heavy', 'balanced', 'turkish_heavy'] as const).map(mix => (
                   <button
@@ -652,7 +689,7 @@ export default function SettingsPage() {
             </SettingCard>
 
             {/* Quiz Frequency */}
-            <SettingCard label="تكرار الاختبارات" pendingBadge={pending.quiz_frequency} onCancelPending={() => cancelPending('quiz_frequency')}>
+            <SettingCard label="تكرار الاختبارات" pendingBadge={pending.quiz_frequency} onCancelPending={() => cancelPending('quiz_frequency')} onDirectApply={() => directApply('quiz_frequency')}>
               <div className="flex flex-col gap-2">
                 {(['never', 'sometimes', 'often'] as const).map(freq => (
                   <button
@@ -676,6 +713,7 @@ export default function SettingsPage() {
               label={TEACHER_SETTING_LABELS.custom_instructions}
               pendingBadge={pending.custom_instructions}
               onCancelPending={() => cancelPending('custom_instructions')}
+              onDirectApply={() => directApply('custom_instructions')}
             >
               <textarea
                 className="input-field w-full text-sm resize-none"
@@ -704,6 +742,69 @@ export default function SettingsPage() {
           </div>
         </section>
 
+            {/* System Prompt */}
+            <SettingCard
+              label="System Prompt الكامل"
+              hint="النص الكامل الذي يصف شخصية المعلم وقواعده — يمكن تعديله ويمر بموافقة"
+              pendingBadge={pending.system_prompt_base}
+              onCancelPending={() => cancelPending('system_prompt_base')}
+              onDirectApply={() => directApply('system_prompt_base')}
+            >
+              <div className="space-y-3">
+                {/* معاينة */}
+                <button
+                  onClick={loadPromptPreview}
+                  disabled={loadingPrompt}
+                  className="btn-ghost w-full py-2 rounded-xl text-xs"
+                >
+                  {loadingPrompt ? '⏳ جارٍ التحميل...' : '👁 عرض Prompt الحالي'}
+                </button>
+                {promptPreview && (
+                  <textarea
+                    readOnly
+                    value={promptPreview}
+                    rows={12}
+                    className="input-field w-full text-xs font-mono resize-none"
+                    style={{
+                      background: 'var(--bg-raised)',
+                      color: 'var(--text-muted)',
+                      border: '1px solid var(--border)',
+                      direction: 'rtl',
+                      fontSize: '0.7rem',
+                      lineHeight: 1.5,
+                    }}
+                  />
+                )}
+
+                {/* تعديل النص الأساسي */}
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  لتعديل شخصية المعلم الأساسية (يُرسَل للموافقة):
+                </p>
+                <textarea
+                  className="input-field w-full text-sm resize-none"
+                  rows={6}
+                  placeholder="أنت معلم لغة تركية دافئ ومشجع... (اتركه فارغاً لاستخدام النص الافتراضي)"
+                  value={teacher.system_prompt_base}
+                  disabled={!!pending.system_prompt_base}
+                  onChange={e => setTeacher(t => ({ ...t, system_prompt_base: e.target.value }))}
+                  onBlur={() => {
+                    if (pending.system_prompt_base) return
+                    proposeTeacherSetting(
+                      'system_prompt_base',
+                      teacher.system_prompt_base,
+                      `تعديل النص الأساسي لـ System Prompt`
+                    )
+                  }}
+                  style={{
+                    background: 'var(--bg-raised)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border)',
+                    opacity: pending.system_prompt_base ? 0.6 : 1,
+                  }}
+                />
+              </div>
+            </SettingCard>
+
         {/* Footer spacing */}
         <div className="h-8" />
       </main>
@@ -731,12 +832,14 @@ function SettingCard({
   hint,
   pendingBadge,
   onCancelPending,
+  onDirectApply,
   children,
 }: {
   label: string
   hint?: string
   pendingBadge?: boolean
   onCancelPending?: () => void
+  onDirectApply?: () => void
   children: React.ReactNode
 }) {
   return (
@@ -756,21 +859,41 @@ function SettingCard({
           )}
         </div>
         {pendingBadge && (
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
             <span
               className="text-xs px-2 py-0.5 rounded-full"
               style={{
                 background: 'rgba(212,175,55,0.15)',
                 color: 'var(--gold)',
                 border: '1px solid rgba(212,175,55,0.3)',
+                whiteSpace: 'nowrap',
               }}
             >
-              في انتظار موافقة
+              انتظار موافقة
             </span>
+            {onDirectApply && (
+              <button
+                onClick={onDirectApply}
+                title="تطبيق التعديل مباشرة"
+                style={{
+                  background: 'rgba(var(--gold-rgb, 212,175,55), 0.2)',
+                  border: '1px solid rgba(212,175,55,0.4)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  color: 'var(--gold)',
+                  fontSize: '0.65rem',
+                  lineHeight: 1,
+                  padding: '3px 6px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                ✓ تطبيق
+              </button>
+            )}
             {onCancelPending && (
               <button
                 onClick={onCancelPending}
-                title="إلغاء الانتظار"
+                title="إلغاء التعديل"
                 style={{
                   background: 'none',
                   border: 'none',

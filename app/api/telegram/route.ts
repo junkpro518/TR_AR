@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   // Fetch the proposal
   const { data: proposal, error } = await supabase
     .from('pending_proposals')
-    .select('id, key, proposed_value, status')
+    .select('id, key, proposed_value, old_value, status')
     .eq('id', proposalId)
     .single()
 
@@ -74,11 +74,18 @@ export async function POST(request: NextRequest) {
     await answerCallbackQuery(queryId, '✅ تم قبول التعديل وتطبيقه')
     await sendTelegramMessage(`✅ <b>تم قبول التعديل</b>\n\nالإعداد <code>${proposal.key}</code> تم تحديثه بنجاح.`)
   } else {
-    // Revert the setting to not-pending with old value (keep previous value, just clear pending flag)
-    await supabase
-      .from('settings')
-      .update({ pending: false })
-      .eq('key', proposal.key)
+    // Revert to old value if available, otherwise just clear pending flag
+    const oldValue = (proposal as { old_value?: unknown }).old_value
+    if (oldValue !== undefined && oldValue !== null) {
+      await supabase
+        .from('settings')
+        .upsert({ key: proposal.key, value: oldValue, pending: false }, { onConflict: 'key' })
+    } else {
+      await supabase
+        .from('settings')
+        .update({ pending: false })
+        .eq('key', proposal.key)
+    }
 
     await answerCallbackQuery(queryId, '❌ تم رفض التعديل')
     await sendTelegramMessage(`❌ <b>تم رفض التعديل</b>\n\nالإعداد <code>${proposal.key}</code> لم يتغير.`)
