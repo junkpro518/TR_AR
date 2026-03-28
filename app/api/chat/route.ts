@@ -7,6 +7,7 @@ import { analyzeAndUpdateGoals } from '@/lib/goal-analyzer'
 import { loadAppSettings } from '@/lib/settings-loader'
 import { getSecret } from '@/lib/secrets-loader'
 import type { ChatRequest } from '@/lib/types'
+import type { SessionSummary } from '@/lib/session-summarizer'
 
 async function runWebSearchIfNeeded(
   message: string,
@@ -114,10 +115,18 @@ export async function POST(request: NextRequest) {
     ? [...new Set(allSessions.flatMap((s: { common_errors?: string[] }) => s.common_errors ?? []))].slice(0, 10)
     : []
 
-  // Load settings and weakness report in parallel (both non-critical)
-  const [appSettings, weaknessReport] = await Promise.all([
+  // Load settings, weakness report, and session summaries in parallel (all non-critical)
+  const [appSettings, weaknessReport, sessionSummaries] = await Promise.all([
     loadAppSettings().catch(() => null),
     getWeaknessReport().catch(() => null),
+    Promise.resolve(
+      supabase
+        .from('session_summaries')
+        .select('id, session_id, summary_ar, topics_covered, vocab_introduced, errors_made, milestones, message_count, created_at')
+        .eq('language', 'turkish')
+        .order('created_at', { ascending: false })
+        .limit(8)
+    ).then(r => (r.data ?? []) as SessionSummary[]).catch(() => [] as SessionSummary[]),
   ])
 
   // بحث إنترنت إذا مفعّل
@@ -131,7 +140,7 @@ export async function POST(request: NextRequest) {
     ? (appSettings.user.cefr_override as typeof cefr_level)
     : cefr_level
 
-  // Build system prompt with student context (current + cross-session errors + weakness data + settings)
+  // Build system prompt with student context (current + cross-session errors + weakness data + settings + memory)
   const systemPrompt = buildSystemPrompt({
     language,
     cefr_level: effectiveCefrLevel,
@@ -143,6 +152,7 @@ export async function POST(request: NextRequest) {
     weakness_report: weaknessReport ?? undefined,
     teacher_config: appSettings?.teacher,
     preferred_topics: appSettings?.user.preferred_topics,
+    session_summaries: sessionSummaries,
   })
 
   // أضف نتائج البحث للـ system prompt إذا وجدت
@@ -258,6 +268,32 @@ export async function POST(request: NextRequest) {
           )
           // Task 1: Fire-and-forget — analyze conversation and auto-add/update goals
           analyzeAndUpdateGoals(supabase, session_id, message, dbResponse, cefr_level).catch(() => {})
+
+          // Fire-and-forget: summarize previous sessions
+          Promise.resolve((async () => {
+            try {
+              const { data: prevSessions } = await supabase
+                .from('sessions')
+                .select('id')
+                .eq('language', 'turkish')
+                .neq('id', session_id)
+                .order('created_at', { ascending: false })
+                .limit(5)
+              if (!prevSessions || prevSessions.length === 0) return
+              const prevIds = prevSessions.map((s: { id: string }) => s.id)
+              const { data: existing } = await supabase
+                .from('session_summaries')
+                .select('session_id')
+                .in('session_id', prevIds)
+              const summarizedIds = new Set((existing ?? []).map((s: { session_id: string }) => s.session_id))
+              const needsSummary = prevIds.find((id: string) => !summarizedIds.has(id))
+              if (!needsSummary) return
+              const { summarizeSession } = await import('@/lib/session-summarizer')
+              const apiKey = process.env.OPENROUTER_API_KEY ?? ''
+              const model = process.env.ANALYSIS_MODEL ?? 'meta-llama/llama-3.1-8b-instruct'
+              await summarizeSession(supabase, needsSummary, apiKey, model)
+            } catch { /* silent */ }
+          })()).catch(() => {})
         } finally {
           controller.close()
         }

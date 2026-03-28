@@ -108,7 +108,7 @@ export default function DashboardPage() {
         </span>
       </header>
 
-      <div className="max-w-xl mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-xl mx-auto px-3 sm:px-4 py-6 space-y-4">
 
         {!sess ? (
           <div className="text-center py-20">
@@ -126,7 +126,7 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* Hero stats */}
-            <div className="grid grid-cols-3 gap-3 animate-slide-up">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-slide-up">
               {[
                 { label: 'المستوى', value: sess.cefr_level, sub: 'CEFR', gold: true },
                 { label: 'نقاط XP',  value: sess.total_xp.toLocaleString(), sub: 'مجموع' },
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                   </Link>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
                   { label: 'الإجمالي',  value: vocab.total,    color: 'var(--text-primary)' },
                   { label: 'متقنة',     value: vocab.mastered, color: 'var(--green)' },
@@ -339,7 +339,7 @@ export default function DashboardPage() {
             )}
 
             {/* Quick actions */}
-            <div className="grid grid-cols-2 gap-3 animate-slide-up delay-400">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-slide-up delay-400">
               <Link
                 href={`/review?language=${language}`}
                 className="btn-gold flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium"

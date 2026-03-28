@@ -54,13 +54,14 @@ export function BottomNav() {
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: '2px',
-                padding: '8px 12px',
+                padding: '8px 4px',
                 borderRadius: '12px',
                 textDecoration: 'none',
                 transition: 'all 0.15s ease',
                 background: isActive ? 'var(--gold-glow)' : 'transparent',
                 border: isActive ? '1px solid var(--border-gold)' : '1px solid transparent',
-                minWidth: '56px',
+                flex: 1,
+                minWidth: 0,
               }}
             >
               <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{item.icon}</span>
@@ -70,6 +71,7 @@ export function BottomNav() {
                   color: isActive ? 'var(--gold)' : 'var(--text-muted)',
                   fontWeight: isActive ? 700 : 400,
                   letterSpacing: '0.02em',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {item.label}

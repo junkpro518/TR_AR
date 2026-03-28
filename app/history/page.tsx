@@ -126,7 +126,7 @@ export default function HistoryPage() {
         </span>
       </header>
 
-      <div className="max-w-xl mx-auto px-4 py-6">
+      <div className="max-w-xl mx-auto px-3 sm:px-4 py-6">
         {loading ? (
           <div className="text-center py-16">
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>جاري التحميل…</p>

@@ -1,5 +1,8 @@
 import type { CEFRLevel, Language, TieredContext } from './types'
 import type { TeacherConfig } from './settings-loader'
+import type { SessionSummary } from './session-summarizer'
+
+export type { SessionSummary }
 
 export const CEFR_INSTRUCTIONS: Record<CEFRLevel, string> = {
   A1: 'Use very simple sentences. Maximum 5-7 words per sentence. Only the most basic vocabulary. Speak slowly and clearly. Repeat key words.',
@@ -38,6 +41,38 @@ interface PromptParams {
   // Teacher & user settings
   teacher_config?: TeacherConfig
   preferred_topics?: string[]
+  // Persistent memory: summaries of past sessions
+  session_summaries?: SessionSummary[]
+  total_session_count?: number
+  total_learning_days?: number
+}
+
+function buildMemorySection(
+  summaries?: SessionSummary[],
+  totalSessionCount?: number,
+  totalLearningDays?: number,
+): string {
+  if (!summaries || summaries.length === 0) return ''
+
+  const header = `\n\n## ذاكرة الجلسات السابقة`
+  const stats = `\nإجمالي الجلسات: ${totalSessionCount ?? summaries.length} | أيام التعلم: ${totalLearningDays ?? '—'}`
+
+  const entries = summaries.map(s => {
+    const date = new Date(s.created_at).toLocaleDateString('ar-SA', {
+      weekday: 'short', month: 'short', day: 'numeric',
+    })
+    const parts = [
+      date,
+      s.summary_ar,
+      s.topics_covered.length > 0 ? `الموضوعات: ${s.topics_covered.join('، ')}` : '',
+      s.vocab_introduced.length > 0 ? `مفردات: ${s.vocab_introduced.join('، ')}` : '',
+      s.errors_made.length > 0 ? `أخطاء: ${s.errors_made.join('، ')}` : '',
+      s.milestones.length > 0 ? `إنجازات: ${s.milestones.join('، ')}` : '',
+    ].filter(Boolean)
+    return `- ${parts.join(' | ')}`
+  })
+
+  return `${header}${stats}\n${entries.join('\n')}`
 }
 
 export function buildSystemPrompt(params: PromptParams): string {
@@ -107,11 +142,17 @@ export function buildSystemPrompt(params: PromptParams): string {
     ? `\nتعليمات خاصة: ${params.teacher_config.custom_instructions}`
     : ''
 
+  const memorySection = buildMemorySection(
+    params.session_summaries,
+    params.total_session_count,
+    params.total_learning_days,
+  )
+
   return `أنت معلم لغة تركية دافئ ومشجع تحادث طالبك بالعربية والتركية معاً.
 
 مستوى CEFR: ${params.cefr_level}
 ${CEFR_INSTRUCTIONS_AR[params.cefr_level]}
-${vocabSection}${goalsSection}${errorsSection}${weaknessSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${teacherAdaptations}${customSection}
+${vocabSection}${goalsSection}${errorsSection}${weaknessSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${teacherAdaptations}${customSection}${memorySection}
 
 قواعد التكيف:
 - تكلم بالتركية ثم اشرح بالعربية: مثال: "Nasılsın? (كيف حالك؟)"
@@ -172,6 +213,9 @@ export function buildSystemPromptFromContext(
   allSessionErrors?: string[],
   teacherConfig?: TeacherConfig,
   preferredTopics?: string[],
+  sessionSummaries?: SessionSummary[],
+  totalSessionCount?: number,
+  totalLearningDays?: number,
 ): string {
   const level = ctx.level
 
@@ -233,8 +277,10 @@ export function buildSystemPromptFromContext(
     ? `\nتعليمات خاصة: ${teacherConfig.custom_instructions}`
     : ''
 
+  const memorySection = buildMemorySection(sessionSummaries, totalSessionCount, totalLearningDays)
+
   return `أنت معلم تركية دافئ ومشجع (مستوى CEFR ${level}) تحادث طالبك بالعربية والتركية معاً.
-${CEFR_INSTRUCTIONS_AR[level]}${errorSection}${vocabSection}${goalSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${teacherAdaptationsCtx}${customSection}
+${CEFR_INSTRUCTIONS_AR[level]}${errorSection}${vocabSection}${goalSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${teacherAdaptationsCtx}${customSection}${memorySection}
 
 قواعد:
 - استخدم 80% مفردات مألوفة + 20% كلمات جديدة مع شرح قصير في السياق

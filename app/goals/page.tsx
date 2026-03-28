@@ -125,7 +125,7 @@ export default function GoalsPage() {
         </button>
       </header>
 
-      <div className="max-w-xl mx-auto px-4 py-6">
+      <div className="max-w-xl mx-auto px-3 sm:px-4 py-6">
 
         {/* Add form */}
         {showForm && (

@@ -260,7 +260,7 @@ export default function TasksPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
                 { label: 'المفردات', value: result.feedback.vocabulary_score },
                 { label: 'القواعد', value: result.feedback.grammar_score },

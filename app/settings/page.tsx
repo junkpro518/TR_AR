@@ -705,8 +705,8 @@ function SettingCard({
       className="card rounded-xl p-4"
       style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div>
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="min-w-0">
           <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
             {label}
           </p>

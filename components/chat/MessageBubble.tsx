@@ -118,7 +118,7 @@ export function MessageBubble({ role, content, isStreaming, language = 'turkish'
       )}
 
       {/* Bubble + TTS */}
-      <div className={`flex flex-col gap-1 max-w-[78%] ${isUser ? 'items-end' : 'items-start'}`}>
+      <div className={`flex flex-col gap-1 max-w-[90%] sm:max-w-[78%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div
           className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${isUser ? 'rounded-bl-none' : 'rounded-br-none'}`}
           style={
