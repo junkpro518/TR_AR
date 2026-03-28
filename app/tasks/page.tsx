@@ -137,15 +137,28 @@ export default function TasksPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <span
-                          className="text-xs font-medium"
-                          style={{ color: 'var(--gold)' }}
+                          className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: 'var(--gold-glow)',
+                            color: 'var(--gold)',
+                            border: '1px solid var(--border-gold)',
+                          }}
                         >
                           {TYPE_LABELS[task.type] ?? task.type}
                         </span>
-                        <h3 className="font-semibold mt-1" style={{ color: 'var(--text-primary)' }}>
-                          {task.title}
+                        <h3
+                          className="font-semibold mt-2"
+                          dir="ltr"
+                          lang="tr"
+                          style={{ color: 'var(--text-primary)' }}
+                        >
+                          🇹🇷 {task.title}
                         </h3>
-                        <p className="text-sm mt-1 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>
+                        <p
+                          className="text-sm mt-1 line-clamp-2"
+                          dir="rtl"
+                          style={{ color: 'var(--text-secondary)' }}
+                        >
                           {task.scenario}
                         </p>
                         <div className="flex gap-2 mt-2 flex-wrap">

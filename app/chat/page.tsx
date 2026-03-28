@@ -109,7 +109,18 @@ export default function ChatPage() {
           fetch(sessionUrl),
           fetch(`/api/vocab?language=${lang}&known=true`),
         ])
-        if (sessionRes.ok) setSession(await sessionRes.json())
+        if (sessionRes.ok) {
+          setSession(await sessionRes.json())
+          if (sessionId) {
+            const histRes = await fetch(`/api/history?session_id=${sessionId}`)
+            if (histRes.ok) {
+              const prevMsgs: Array<{ id: string; role: 'user' | 'assistant'; content: string }> = await histRes.json()
+              if (Array.isArray(prevMsgs) && prevMsgs.length > 0) {
+                setMessages(prevMsgs.map(m => ({ id: m.id, role: m.role, content: m.content })))
+              }
+            }
+          }
+        }
         if (vocabRes.ok) {
           const vocab = await vocabRes.json()
           setKnownVocab(vocab.map((v: { word: string }) => v.word))
