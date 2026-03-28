@@ -2,50 +2,46 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 
 // POST /api/admin/clear-data
-// يحذف جميع بيانات التعلم (جلسات، رسائل، مفردات، إلخ)
-// لإعادة البدء من الصفر بعد الاختبار
+// يُفرغ محتوى جداول التعلم (DELETE الصفوف فقط — الجداول تبقى كما هي)
+// ⚠️ لا يمسّ: settings, app_secrets (المفاتيح والإعدادات تبقى محفوظة)
 export async function POST() {
   const supabase = createServerClient()
 
-  try {
-    // حذف بالترتيب الصحيح (الجداول ذات المراجع أولاً)
-    const tables = [
-      'session_summaries',
-      'task_attempts',
-      'feedback_log',
-      'achievements',
-      'messages',
-      'vocab_cards',
-      'goals',
-      'tasks',
-      'pending_proposals',
-      'sessions',
-      'api_logs',
-    ]
+  // الجداول المراد تفريغها — بالترتيب الصحيح (الأبناء قبل الآباء)
+  // ⚠️ 'settings' و 'app_secrets' محذوفتان عمداً — لا نحذف المفاتيح والإعدادات
+  const TABLES_TO_CLEAR = [
+    'session_summaries',  // يعتمد على sessions
+    'task_attempts',      // يعتمد على tasks
+    'feedback_log',       // يعتمد على messages
+    'achievements',
+    'messages',           // يعتمد على sessions
+    'vocab_cards',
+    'goals',
+    'tasks',
+    'pending_proposals',
+    'sessions',
+    'api_logs',
+  ] as const
 
-    const results: Record<string, string> = {}
+  const results: Record<string, string> = {}
 
-    for (const table of tables) {
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000') // حذف كل الصفوف
+  for (const table of TABLES_TO_CLEAR) {
+    // .not('id', 'is', null) = احذف كل صف له id (أي جميع الصفوف الحقيقية)
+    // هذا يُفرغ المحتوى فقط — الجدول نفسه وبنيته تبقيان سليمَين
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .not('id', 'is', null)
 
-      if (error) {
-        // تجاهل أخطاء "الجدول غير موجود" (migration لم تُطبَّق بعد)
-        if (error.code === '42P01' || error.message?.includes('does not exist')) {
-          results[table] = 'skipped (table not found)'
-        } else {
-          results[table] = `error: ${error.message}`
-        }
-      } else {
-        results[table] = 'cleared'
-      }
+    if (error) {
+      // تجاهل أخطاء الجدول غير الموجود (migration لم تُطبَّق بعد)
+      const tableNotFound = error.code === '42P01' || error.message?.includes('does not exist')
+      results[table] = tableNotFound ? 'skipped (not created yet)' : `error: ${error.message}`
+    } else {
+      results[table] = 'emptied'
     }
-
-    // إعادة ضبط الإعدادات للقيم الافتراضية (اختياري — نتركها)
-    return NextResponse.json({ ok: true, results })
-  } catch (err) {
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
   }
+
+  const hasErrors = Object.values(results).some(r => r.startsWith('error'))
+  return NextResponse.json({ ok: !hasErrors, results })
 }
