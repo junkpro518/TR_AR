@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { streamChatCompletion } from '@/lib/openrouter'
+import { getSecret } from '@/lib/secrets-loader'
 import type { Language, CEFRLevel, TaskFeedback } from '@/lib/types'
 
 // GET /api/task?language=turkish&cefr_level=A1
@@ -50,8 +51,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Task not found' }, { status: 404 })
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY!
-  const model = process.env.ANALYSIS_MODEL!
+  const apiKey = await getSecret('OPENROUTER_API_KEY')
+  const model = await getSecret('ANALYSIS_MODEL') || process.env.ANALYSIS_MODEL
+  if (!apiKey || !model) {
+    return NextResponse.json({ error: 'API key or model not configured' }, { status: 500 })
+  }
 
   const evalPrompt = `You are evaluating a language learning task attempt. Return ONLY valid JSON.
 

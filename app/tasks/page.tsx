@@ -29,6 +29,7 @@ export default function TasksPage() {
   const [userText, setUserText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<{ feedback: TaskFeedback; xp_earned: number } | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [page, setPage] = useState<PageState>('list')
 
   async function loadTasks(l: CEFRLevel) {
@@ -54,6 +55,7 @@ export default function TasksPage() {
   async function submitTask() {
     if (!selectedTask || !userText.trim()) return
     setSubmitting(true)
+    setSubmitError(null)
     try {
       const res = await fetch('/api/task', {
         method: 'POST',
@@ -65,8 +67,13 @@ export default function TasksPage() {
         }),
       })
       const data = await res.json()
+      if (!res.ok || !data.feedback) {
+        throw new Error(data.error ?? 'حدث خطأ في التقييم')
+      }
       setResult(data)
       setPage('result')
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'حدث خطأ غير متوقع')
     } finally {
       setSubmitting(false)
     }
@@ -233,6 +240,19 @@ export default function TasksPage() {
               className="input-field w-full rounded-xl p-4 resize-none"
               dir="auto"
             />
+
+            {submitError && (
+              <div
+                className="rounded-xl px-4 py-3 text-sm"
+                style={{
+                  background: 'var(--red-bg)',
+                  border: '1px solid rgba(184,72,72,0.25)',
+                  color: 'var(--red)',
+                }}
+              >
+                ⚠ {submitError}
+              </div>
+            )}
 
             <button
               onClick={submitTask}

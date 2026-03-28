@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const supabase = createServerClient()
   const { data, error } = await supabase
     .from('goals')
-    .select('*')
+    .select('id, language, title, is_auto, progress, completed, created_at, milestones')
     .eq('language', language)
     .order('created_at', { ascending: true })
 

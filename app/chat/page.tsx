@@ -13,6 +13,24 @@ interface ChatMessage {
   content: string
 }
 
+function generateSuggestions(assistantMessage: string): string[] {
+  const sugs: string[] = []
+  if (assistantMessage.includes('؟') || assistantMessage.includes('?')) {
+    if (assistantMessage.includes('تمرين') || assistantMessage.includes('مثال')) {
+      sugs.push('نعم، هيا بنا')
+      sugs.push('أعطني مثالاً أولاً')
+    } else {
+      sugs.push('نعم')
+      sugs.push('لا أعرف')
+      sugs.push('أخبرني المزيد')
+    }
+  } else {
+    sugs.push('أعطني مثالاً')
+    sugs.push('كيف أستخدمها؟')
+    sugs.push('هيا نتمرن')
+  }
+  return sugs.slice(0, 3)
+}
 
 export default function ChatPage() {
   const [language, setLanguage] = useState<Language>('turkish')
@@ -24,7 +42,10 @@ export default function ChatPage() {
   const [knownVocab, setKnownVocab] = useState<string[]>([])
   const [goals] = useState<string[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [searchEnabled, setSearchEnabled] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const assistantContentRef = useRef('')
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -72,6 +93,7 @@ export default function ChatPage() {
   const sendMessage = useCallback(async (userMessage: string) => {
     if (!session) return
 
+    setSuggestions([])
     const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', content: userMessage }
     setMessages(prev => [...prev, userMsg])
     setIsLoading(true)
@@ -79,6 +101,7 @@ export default function ChatPage() {
 
     const assistantId = (Date.now() + 1).toString()
     setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '' }])
+    assistantContentRef.current = ''
 
     try {
       const chatRes = await fetch('/api/chat', {
@@ -93,6 +116,7 @@ export default function ChatPage() {
           goals,
           recent_errors: [],
           last_topic: null,
+          ...(searchEnabled ? { web_search_override: true } : {}),
         }),
       })
 
@@ -116,6 +140,7 @@ export default function ChatPage() {
             try {
               const data = JSON.parse(line.slice(6))
               if (data.text) {
+                assistantContentRef.current += data.text
                 setMessages(prev =>
                   prev.map(m => m.id === assistantId ? { ...m, content: m.content + data.text } : m)
                 )
@@ -126,6 +151,11 @@ export default function ChatPage() {
         }
       } finally {
         reader.releaseLock()
+      }
+
+      // Generate contextual suggestions from assistant response
+      if (assistantContentRef.current) {
+        setSuggestions(generateSuggestions(assistantContentRef.current))
       }
 
       if (userMsgDbId) {
@@ -147,7 +177,7 @@ export default function ChatPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [session, language, knownVocab, goals])
+  }, [session, language, knownVocab, goals, searchEnabled])
 
   const langFlag = '🇹🇷'
   const langName = 'التركية'
@@ -193,8 +223,22 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Right: mobile feedback toggle */}
+          {/* Right: search toggle + mobile feedback toggle */}
           <nav className="flex items-center gap-1">
+            {/* Web search toggle */}
+            <button
+              onClick={() => setSearchEnabled(v => !v)}
+              title={searchEnabled ? 'تعطيل البحث' : 'تفعيل البحث'}
+              className="px-2 py-1 rounded-lg text-xs"
+              style={{
+                background: searchEnabled ? 'var(--gold-glow)' : 'transparent',
+                border: `1px solid ${searchEnabled ? 'var(--border-gold)' : 'var(--border)'}`,
+                color: searchEnabled ? 'var(--gold)' : 'var(--text-muted)',
+                cursor: 'pointer',
+              }}
+            >
+              🔍
+            </button>
             {/* Mobile sidebar toggle */}
             <button
               className="md:hidden px-2.5 py-1 rounded-lg text-xs"
@@ -266,8 +310,33 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </main>
 
+        {/* Quick suggestions */}
+        {suggestions.length > 0 && !isLoading && (
+          <div
+            className="flex gap-2 px-4 py-2 overflow-x-auto"
+            style={{ borderTop: '1px solid var(--border)' }}
+          >
+            {suggestions.map((sug, i) => (
+              <button
+                key={i}
+                onClick={() => { sendMessage(sug); setSuggestions([]) }}
+                className="shrink-0 text-xs px-3 py-1.5 rounded-full"
+                style={{
+                  background: 'var(--bg-raised)',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {sug}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Input */}
-        <InputBar onSend={sendMessage} disabled={isLoading || !session} language={language} />
+        <InputBar onSend={sendMessage} disabled={isLoading || !session} language={language} onTyping={() => setSuggestions([])} />
       </div>
 
       {/* ─── Feedback Sidebar (desktop) ─── */}

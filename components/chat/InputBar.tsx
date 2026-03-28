@@ -6,6 +6,7 @@ interface InputBarProps {
   onSend: (message: string) => void
   disabled: boolean
   language?: 'turkish'
+  onTyping?: () => void
 }
 
 // Type shim for browsers that prefix SpeechRecognition
@@ -34,7 +35,7 @@ function getSpeechRecognition(): SpeechRecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
 }
 
-export function InputBar({ onSend, disabled, language = 'turkish' }: InputBarProps) {
+export function InputBar({ onSend, disabled, language = 'turkish', onTyping }: InputBarProps) {
   const [value, setValue] = useState('')
   const [listening, setListening] = useState(false)
   const [sttSupported, setSttSupported] = useState(false)
@@ -141,7 +142,7 @@ export function InputBar({ onSend, disabled, language = 'turkish' }: InputBarPro
           ref={textareaRef}
           rows={1}
           value={value}
-          onChange={e => setValue(e.target.value)}
+          onChange={e => { setValue(e.target.value); onTyping?.() }}
           onKeyDown={handleKeyDown}
           placeholder={listening ? 'يستمع…' : 'اكتب رسالتك… / Write your message…'}
           disabled={disabled}

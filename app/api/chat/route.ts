@@ -82,8 +82,8 @@ async function runWebSearchIfNeeded(
 }
 
 export async function POST(request: NextRequest) {
-  const body: ChatRequest = await request.json()
-  const { message, language, session_id, cefr_level, known_vocab, goals, recent_errors, last_topic } = body
+  const body: ChatRequest & { web_search_override?: boolean } = await request.json()
+  const { message, language, session_id, cefr_level, known_vocab, goals, recent_errors, last_topic, web_search_override } = body
 
   if (!message || !language || !session_id) {
     return new Response(JSON.stringify({ error: 'message, language, session_id required' }), {
@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY
-  const model = process.env.CHAT_MODEL
+  const apiKey = await getSecret('OPENROUTER_API_KEY')
+  const model = await getSecret('CHAT_MODEL') || process.env.CHAT_MODEL
   if (!apiKey || !model) {
     return new Response(
       JSON.stringify({ error: 'Server configuration error.' }),
@@ -129,10 +129,11 @@ export async function POST(request: NextRequest) {
     ).then(r => (r.data ?? []) as SessionSummary[]).catch(() => [] as SessionSummary[]),
   ])
 
-  // بحث إنترنت إذا مفعّل
+  // بحث إنترنت إذا مفعّل (من الإعدادات أو من override في الطلب)
+  const webSearchActive = (appSettings?.user?.web_search_enabled ?? false) || (web_search_override === true)
   const { searchResults, searchQuery } = await runWebSearchIfNeeded(
     message,
-    appSettings?.user?.web_search_enabled ?? false,
+    webSearchActive,
   )
 
   // Use cefr_override if set in user settings

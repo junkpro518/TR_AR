@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { streamChatCompletion } from '@/lib/openrouter'
+import { getSecret } from '@/lib/secrets-loader'
 import type { Language, CEFRLevel } from '@/lib/types'
 
 // POST /api/lesson — generate a structured lesson
@@ -10,11 +11,11 @@ export async function POST(request: NextRequest) {
     language: Language
     cefr_level: CEFRLevel
     topic?: string
-    session_id: string
+    session_id?: string
   }
 
-  if (!language || !cefr_level || !session_id) {
-    return NextResponse.json({ error: 'language, cefr_level, session_id required' }, { status: 400 })
+  if (!language || !cefr_level) {
+    return NextResponse.json({ error: 'language, cefr_level required' }, { status: 400 })
   }
 
   const supabase = createServerClient()
@@ -31,8 +32,11 @@ export async function POST(request: NextRequest) {
 
   const lessonTopic = topic ?? goalRow?.title ?? 'everyday conversation'
 
-  const apiKey = process.env.OPENROUTER_API_KEY!
-  const model = process.env.CHAT_MODEL!
+  const apiKey = await getSecret('OPENROUTER_API_KEY')
+  const model = await getSecret('CHAT_MODEL') || process.env.CHAT_MODEL
+  if (!apiKey || !model) {
+    return NextResponse.json({ error: 'API key or model not configured' }, { status: 500 })
+  }
 
   const prompt = `You are a ${language === 'turkish' ? 'Turkish' : 'English'} language teacher.
 Create a short structured lesson for a ${cefr_level} student on the topic: "${lessonTopic}".

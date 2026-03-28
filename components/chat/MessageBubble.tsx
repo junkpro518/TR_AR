@@ -94,7 +94,7 @@ export function MessageBubble({ role, content, isStreaming, language = 'turkish'
     speakWithWebSpeech()
   }, [displayContent, isStreaming, speaking, stopSpeaking, speakWithWebSpeech])
 
-  const hasTTS = typeof window !== 'undefined' && 'speechSynthesis' in window
+  const hasTTS = true
 
   return (
     <div
@@ -260,20 +260,28 @@ export function MessageBubble({ role, content, isStreaming, language = 'turkish'
         )}
 
         {/* TTS button — only for assistant, only when done streaming */}
-        {!isUser && !isStreaming && displayContent && hasTTS && (
+        {!isUser && !isStreaming && displayContent && (
           <button
             onClick={speak}
-            aria-label={speaking ? 'إيقاف' : 'استمع'}
-            title={speaking ? 'إيقاف الصوت' : 'اسمع الرد'}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs transition-all"
+            aria-label={speaking ? 'إيقاف الصوت' : 'تشغيل الصوت'}
+            title={speaking ? 'إيقاف' : 'استمع بالتركية'}
             style={{
+              width: '26px',
+              height: '26px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: speaking ? 'var(--gold-glow)' : 'var(--bg-raised)',
+              border: `1px solid ${speaking ? 'var(--border-gold)' : 'var(--border)'}`,
               color: speaking ? 'var(--gold)' : 'var(--text-muted)',
-              background: speaking ? 'var(--gold-glow)' : 'transparent',
-              border: `1px solid ${speaking ? 'var(--border-gold)' : 'transparent'}`,
               cursor: 'pointer',
+              fontSize: '0.65rem',
+              flexShrink: 0,
+              transition: 'all 0.15s ease',
             }}
           >
-            {speaking ? '⏹ إيقاف' : '▶ استمع'}
+            {speaking ? '⏹' : '▶'}
           </button>
         )}
       </div>

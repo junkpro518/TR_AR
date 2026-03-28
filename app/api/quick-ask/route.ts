@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { streamChatCompletion } from '@/lib/openrouter'
+import { getSecret } from '@/lib/secrets-loader'
 
 const QUICK_ASK_SYSTEM_PROMPT = `أنت مساعد لغوي للغة التركية. تجيب على أسئلة سريعة عن:
 - معنى الكلمات والجمل التركية
@@ -42,8 +43,8 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY
-  const model = process.env.CHAT_MODEL
+  const apiKey = await getSecret('OPENROUTER_API_KEY')
+  const model = await getSecret('CHAT_MODEL') || process.env.CHAT_MODEL
   if (!apiKey || !model) {
     return new Response(JSON.stringify({ error: 'Server configuration error.' }), {
       status: 500,

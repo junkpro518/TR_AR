@@ -98,6 +98,7 @@ export default function HistoryPage() {
   async function loadMessages(session_id: string) {
     if (selectedSession === session_id) { setSelectedSession(null); setMessages([]); return }
     setSelectedSession(session_id)
+    setMessages([])
     setLoadingMsgs(true)
     const res = await fetch(`/api/history?session_id=${session_id}`)
     const data = await res.json()
