@@ -4,6 +4,13 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import type { Language } from '@/lib/types'
 
+interface Milestone {
+  step: number
+  title: string
+  description: string
+  estimated_days: number
+}
+
 interface Goal {
   id: string
   language: Language
@@ -12,6 +19,7 @@ interface Goal {
   progress: number
   completed: boolean
   created_at: string
+  milestones?: Milestone[]
 }
 
 export default function GoalsPage() {
@@ -24,6 +32,8 @@ export default function GoalsPage() {
   const [newTitle, setNewTitle] = useState('')
   const [adding, setAdding] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [breakingDown, setBreakingDown] = useState<string | null>(null) // goal_id
+  const [expandedMilestones, setExpandedMilestones] = useState<string | null>(null) // goal_id
 
   async function loadGoals() {
     setLoading(true)
@@ -38,15 +48,31 @@ export default function GoalsPage() {
   async function addGoal() {
     if (!newTitle.trim()) return
     setAdding(true)
-    await fetch('/api/goals', {
+    const res = await fetch('/api/goals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ language, title: newTitle.trim() }),
     })
+    const newGoal = await res.json()
     setNewTitle('')
     setShowForm(false)
     await loadGoals()
     setAdding(false)
+
+    // استدعِ breakdown في الخلفية
+    if (newGoal?.id) {
+      setBreakingDown(newGoal.id)
+      try {
+        await fetch('/api/goals/breakdown', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ goal_id: newGoal.id, title: newGoal.title, language }),
+        })
+        await loadGoals() // أعد التحميل ليظهر الـ breakdown
+      } finally {
+        setBreakingDown(null)
+      }
+    }
   }
 
   async function toggleComplete(goal: Goal) {
@@ -196,6 +222,53 @@ export default function GoalsPage() {
                                   }}
                                 />
                               </div>
+                            </div>
+                          )}
+
+                          {/* زر المراحل */}
+                          {goal.milestones && goal.milestones.length > 0 && (
+                            <button
+                              onClick={() => setExpandedMilestones(expandedMilestones === goal.id ? null : goal.id)}
+                              className="mt-2 text-xs flex items-center gap-1 transition-colors"
+                              style={{ color: 'var(--gold)', cursor: 'pointer', background: 'none', border: 'none' }}
+                            >
+                              {expandedMilestones === goal.id ? '▲' : '▼'} مسار التعلم ({goal.milestones.length} مراحل)
+                            </button>
+                          )}
+
+                          {/* حالة توليد المراحل */}
+                          {breakingDown === goal.id && (
+                            <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                              جاري وضع خطة التعلم...
+                            </p>
+                          )}
+
+                          {/* عرض المراحل */}
+                          {expandedMilestones === goal.id && goal.milestones && goal.milestones.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {goal.milestones.map(m => (
+                                <div
+                                  key={m.step}
+                                  className="rounded-lg p-3"
+                                  style={{ background: 'var(--bg-base)', border: '1px solid var(--border)' }}
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <span
+                                      className="text-xs font-bold shrink-0 w-5 h-5 rounded-full flex items-center justify-center"
+                                      style={{ background: 'var(--gold)', color: '#0D0B08', fontSize: '0.6rem' }}
+                                    >
+                                      {m.step}
+                                    </span>
+                                    <div>
+                                      <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{m.title}</p>
+                                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{m.description}</p>
+                                      <p className="text-xs mt-1" style={{ color: 'var(--gold)', opacity: 0.7 }}>
+                                        ~{m.estimated_days} يوم
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
