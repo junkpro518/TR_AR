@@ -237,9 +237,14 @@ export async function POST(request: NextRequest) {
             ).catch(() => {}) // fire-and-forget
           }
 
+          // احذف QUIZ blocks من النص المحفوظ (الـ UI يُعيد بناءها)
+          // لكن أبقِها في cleanResponse الذي يُرسَل للـ client
+          // فقط في الرسالة المحفوظة في DB، احذف الـ quiz
+          const dbResponse = cleanResponse.replace(/\[QUIZ\][\s\S]*?\[\/QUIZ\]/gi, '').trim()
+
           const messageToSave = searchQuery
-            ? `[WEB_SEARCH]\n${cleanResponse}`
-            : cleanResponse
+            ? `[WEB_SEARCH]\n${dbResponse}`
+            : dbResponse
 
           const { data: savedAssistantMsg } = await supabase
             .from('messages')
@@ -252,7 +257,7 @@ export async function POST(request: NextRequest) {
             )
           )
           // Task 1: Fire-and-forget — analyze conversation and auto-add/update goals
-          analyzeAndUpdateGoals(supabase, session_id, message, cleanResponse, cefr_level).catch(() => {})
+          analyzeAndUpdateGoals(supabase, session_id, message, dbResponse, cefr_level).catch(() => {})
         } finally {
           controller.close()
         }

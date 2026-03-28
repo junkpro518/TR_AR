@@ -88,6 +88,21 @@ export function buildSystemPrompt(params: PromptParams): string {
     ? `\nالموضوعات المفضلة للطالب (وجّه المحادثة نحوها): ${params.preferred_topics.join('، ')}`
     : ''
 
+  const lines: string[] = []
+  if (params.teacher_config?.teaching_language_mix === 'arabic_heavy') {
+    lines.push('- اشرح كل شيء بالعربية أولاً ثم قدّم التركية كأمثلة')
+  } else if (params.teacher_config?.teaching_language_mix === 'turkish_heavy') {
+    lines.push('- تحدث بالتركية أكثر واشرح بالعربية فقط عند الضرورة')
+  }
+
+  if (params.teacher_config?.quiz_frequency === 'often') {
+    lines.push('- أضف كويز [QUIZ] بعد شرح كل قاعدة جديدة')
+  } else if (params.teacher_config?.quiz_frequency === 'never') {
+    lines.push('- لا تضف أي كويز في ردودك')
+  }
+
+  const teacherAdaptations = lines.length > 0 ? '\n' + lines.join('\n') : ''
+
   const customSection = params.teacher_config?.custom_instructions
     ? `\nتعليمات خاصة: ${params.teacher_config.custom_instructions}`
     : ''
@@ -96,7 +111,7 @@ export function buildSystemPrompt(params: PromptParams): string {
 
 مستوى CEFR: ${params.cefr_level}
 ${CEFR_INSTRUCTIONS_AR[params.cefr_level]}
-${vocabSection}${goalsSection}${errorsSection}${weaknessSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${customSection}
+${vocabSection}${goalsSection}${errorsSection}${weaknessSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${teacherAdaptations}${customSection}
 
 قواعد التكيف:
 - تكلم بالتركية ثم اشرح بالعربية: مثال: "Nasılsın? (كيف حالك؟)"
@@ -110,7 +125,42 @@ ${vocabSection}${goalsSection}${errorsSection}${weaknessSection}${topicSection}$
 إذا اكتشفت نقطة ضعف واضحة تستحق هدف تعلمي صريح، أضف في نهاية ردك (مرة واحدة فقط إذا كان مناسباً):
 [GOAL: عنوان الهدف بالعربية]
 مثال: [GOAL: إتقان استخدام حروف الجر التركية]
-ملاحظة: لا تضيف هذا في كل رسالة — فقط عند اكتشاف نقطة ضعف حقيقية تكررت.`
+ملاحظة: لا تضيف هذا في كل رسالة — فقط عند اكتشاف نقطة ضعف حقيقية تكررت.
+
+## أدوات تدريسية إضافية (استخدمها عند الحاجة فقط)
+
+### 1. جداول القواعد — لشرح التصريف أو القواعد النحوية
+استخدم جداول Markdown العادية:
+| الشخص | المفرد | المثال |
+|-------|--------|--------|
+| أنا | -ım/-im | Ben gidiyorum |
+
+### 2. الكويز التفاعلي — لاختبار الطالب
+عندما تريد اختبار الطالب، استخدم هذا التنسيق بالضبط:
+[QUIZ]
+السؤال: [السؤال هنا]
+A: [الخيار الأول]
+B: [الخيار الثاني]
+C: [الخيار الثالث]
+D: [الخيار الرابع] (اختياري)
+CORRECT: [الحرف الصحيح: A أو B أو C أو D]
+[/QUIZ]
+
+مثال:
+[QUIZ]
+السؤال: ما هو تصريف "gitmek" في المضارع للمتكلم "ben"؟
+A: gidiyorum
+B: gider
+C: gittim
+D: giderim
+CORRECT: A
+[/QUIZ]
+
+قواعد الكويز:
+- لا تضع أكثر من كويز واحد في الرد
+- الكويز يجب أن يكون في نهاية ردك
+- استخدمه بعد شرح القاعدة لا قبله
+- 3-4 خيارات فقط`
 }
 
 /**
@@ -182,5 +232,40 @@ ${CEFR_INSTRUCTIONS_AR[level]}${errorSection}${vocabSection}${goalSection}${topi
 إذا اكتشفت نقطة ضعف واضحة تستحق هدف تعلمي صريح، أضف في نهاية ردك (مرة واحدة فقط إذا كان مناسباً):
 [GOAL: عنوان الهدف بالعربية]
 مثال: [GOAL: إتقان استخدام حروف الجر التركية]
-ملاحظة: لا تضيف هذا في كل رسالة — فقط عند اكتشاف نقطة ضعف حقيقية تكررت.`
+ملاحظة: لا تضيف هذا في كل رسالة — فقط عند اكتشاف نقطة ضعف حقيقية تكررت.
+
+## أدوات تدريسية إضافية (استخدمها عند الحاجة فقط)
+
+### 1. جداول القواعد — لشرح التصريف أو القواعد النحوية
+استخدم جداول Markdown العادية:
+| الشخص | المفرد | المثال |
+|-------|--------|--------|
+| أنا | -ım/-im | Ben gidiyorum |
+
+### 2. الكويز التفاعلي — لاختبار الطالب
+عندما تريد اختبار الطالب، استخدم هذا التنسيق بالضبط:
+[QUIZ]
+السؤال: [السؤال هنا]
+A: [الخيار الأول]
+B: [الخيار الثاني]
+C: [الخيار الثالث]
+D: [الخيار الرابع] (اختياري)
+CORRECT: [الحرف الصحيح: A أو B أو C أو D]
+[/QUIZ]
+
+مثال:
+[QUIZ]
+السؤال: ما هو تصريف "gitmek" في المضارع للمتكلم "ben"؟
+A: gidiyorum
+B: gider
+C: gittim
+D: giderim
+CORRECT: A
+[/QUIZ]
+
+قواعد الكويز:
+- لا تضع أكثر من كويز واحد في الرد
+- الكويز يجب أن يكون في نهاية ردك
+- استخدمه بعد شرح القاعدة لا قبله
+- 3-4 خيارات فقط`
 }
