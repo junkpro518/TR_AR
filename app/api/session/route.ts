@@ -88,3 +88,28 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(newSession, { status: 201 })
 }
+
+// POST /api/session — always creates a NEW session
+export async function POST(request: NextRequest) {
+  const body = await request.json().catch(() => ({}))
+  const language = (body.language ?? 'turkish') as Language
+
+  const supabase = createServerClient()
+  const { data: newSession, error } = await supabase
+    .from('sessions')
+    .insert({
+      language,
+      cefr_level: 'A1' as CEFRLevel,
+      total_xp: 0,
+      streak_days: 1,
+      last_activity_date: new Date().toISOString().split('T')[0],
+    })
+    .select()
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json(newSession, { status: 201 })
+}

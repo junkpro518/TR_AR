@@ -35,11 +35,40 @@ export async function POST(request: NextRequest) {
     user_text: string
   }
 
-  if (!task_id || !session_id || !user_text?.trim()) {
-    return NextResponse.json({ error: 'task_id, session_id, user_text required' }, { status: 400 })
+  if (!task_id || !user_text?.trim()) {
+    return NextResponse.json({ error: 'task_id and user_text required' }, { status: 400 })
   }
 
   const supabase = createServerClient()
+
+  let effectiveSessionId = session_id
+
+  if (!effectiveSessionId) {
+    // Get or create latest session
+    const { data: latestSession } = await supabase
+      .from('sessions')
+      .select('id')
+      .eq('language', 'turkish')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (latestSession) {
+      effectiveSessionId = latestSession.id
+    } else {
+      // Create a new session
+      const { data: newSession } = await supabase
+        .from('sessions')
+        .insert({ language: 'turkish', cefr_level: 'A1', total_xp: 0, streak_days: 1, last_activity_date: new Date().toISOString().split('T')[0] })
+        .select('id')
+        .single()
+      effectiveSessionId = newSession?.id ?? ''
+    }
+  }
+
+  if (!effectiveSessionId) {
+    return NextResponse.json({ error: 'task_id and user_text required' }, { status: 400 })
+  }
 
   const { data: task, error: taskError } = await supabase
     .from('tasks')
@@ -108,7 +137,7 @@ Return JSON:
 
   const { error: insertError } = await supabase.from('task_attempts').insert({
     task_id,
-    session_id,
+    session_id: effectiveSessionId,
     score: feedbackJson.overall_score,
     feedback_json: feedbackJson,
     completed: feedbackJson.overall_score >= 60,
@@ -122,7 +151,7 @@ Return JSON:
     const { data: sess } = await supabase
       .from('sessions')
       .select('id, total_xp')
-      .eq('id', session_id)
+      .eq('id', effectiveSessionId)
       .single()
     if (sess) {
       await supabase

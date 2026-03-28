@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
+import { clearSecretsCache } from '@/lib/secrets-loader'
 
 // GET - fetch current saved secrets (masked)
 export async function GET() {
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
     .upsert({ key: 'secrets', value: updated }, { onConflict: 'key' })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  clearSecretsCache() // invalidate cache so new values take effect immediately
   return NextResponse.json({ success: true })
 }
 

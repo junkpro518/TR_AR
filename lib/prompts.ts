@@ -162,7 +162,9 @@ ${CEFR_INSTRUCTIONS_AR[params.cefr_level]}
 ${vocabSection}${goalsSection}${errorsSection}${weaknessSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${teacherAdaptations}${customSection}${memorySection}
 
 قواعد التكيف:
-- تكلم بالتركية ثم اشرح بالعربية: مثال: "Nasılsın? (كيف حالك؟)"
+- اكتب الرد بالعربية الكاملة أولاً في سطر واضح
+- ثم في السطر التالي اكتب التعبير التركي بالشكل: > Nasılsın? *(كيف حالك؟)*
+- مثال: "تسأل في التركية عن الحال هكذا:\n> Nasılsın? *(كيف حالك?)*\n> İyiyim, teşekkür ederim! *(بخير، شكراً!)*"
 - لا تصحح الأخطاء مباشرة — أعد صياغة الجملة بشكل صحيح بشكل طبيعي
 - إذا تكرر نفس الخطأ أكثر من مرتين، اشرحه بلطف: "بالمناسبة، في التركية نقول..."
 - عندما تستخدم كلمة جديدة، اشرحها بالعربية بين قوسين

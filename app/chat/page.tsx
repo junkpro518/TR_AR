@@ -44,8 +44,10 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [searchEnabled, setSearchEnabled] = useState(false)
+  const [startingNew, setStartingNew] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const assistantContentRef = useRef('')
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -104,6 +106,9 @@ export default function ChatPage() {
     assistantContentRef.current = ''
 
     try {
+      const abortController = new AbortController()
+      abortControllerRef.current = abortController
+
       const chatRes = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -118,6 +123,7 @@ export default function ChatPage() {
           last_topic: null,
           ...(searchEnabled ? { web_search_override: true } : {}),
         }),
+        signal: abortController.signal,
       })
 
       if (!chatRes.ok) throw new Error('فشل الاتصال بالمعلم')
@@ -172,12 +178,48 @@ export default function ChatPage() {
       }
 
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // User stopped the response — keep whatever was streamed
+        setIsLoading(false)
+        return
+      }
       setError(err instanceof Error ? err.message : 'حدث خطأ غير متوقع')
       setMessages(prev => prev.filter(m => m.id !== assistantId))
     } finally {
+      abortControllerRef.current = null
       setIsLoading(false)
     }
   }, [session, language, knownVocab, goals, searchEnabled])
+
+  const stopResponse = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+    setIsLoading(false)
+  }, [])
+
+  const startNewConversation = useCallback(async () => {
+    if (startingNew) return
+    setStartingNew(true)
+    try {
+      const res = await fetch('/api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language }),
+      })
+      if (res.ok) {
+        const newSession = await res.json()
+        setSession(newSession)
+        setMessages([])
+        setSuggestions([])
+        setFeedback(null)
+        setError(null)
+      }
+    } finally {
+      setStartingNew(false)
+    }
+  }, [language, startingNew])
 
   const langFlag = '🇹🇷'
   const langName = 'التركية'
@@ -195,7 +237,7 @@ export default function ChatPage() {
           className="flex items-center justify-between px-4 py-3 shrink-0"
           style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}
         >
-          {/* Left: Language + back */}
+          {/* Left: Language + back + new conversation */}
           <div className="flex items-center gap-3">
             <Link
               href="/"
@@ -221,14 +263,29 @@ export default function ChatPage() {
                 </p>
               )}
             </div>
+            <button
+              onClick={startNewConversation}
+              disabled={startingNew || isLoading}
+              title="بدء محادثة جديدة"
+              className="text-xs px-2 py-1 rounded-lg"
+              style={{
+                color: 'var(--text-muted)',
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                cursor: 'pointer',
+                opacity: (startingNew || isLoading) ? 0.5 : 1,
+              }}
+            >
+              {startingNew ? '...' : '✦ جديد'}
+            </button>
           </div>
 
-          {/* Right: search toggle + mobile feedback toggle */}
+          {/* Right: search toggle + stop button + mobile feedback toggle */}
           <nav className="flex items-center gap-1">
             {/* Web search toggle */}
             <button
               onClick={() => setSearchEnabled(v => !v)}
-              title={searchEnabled ? 'تعطيل البحث' : 'تفعيل البحث'}
+              title={searchEnabled ? 'تعطيل البحث عن الإنترنت' : 'تفعيل البحث عن الإنترنت'}
               className="px-2 py-1 rounded-lg text-xs"
               style={{
                 background: searchEnabled ? 'var(--gold-glow)' : 'transparent',
@@ -239,6 +296,22 @@ export default function ChatPage() {
             >
               🔍
             </button>
+            {/* Stop button — shown only when loading */}
+            {isLoading && (
+              <button
+                onClick={stopResponse}
+                title="إيقاف الرد"
+                className="px-2 py-1 rounded-lg text-xs"
+                style={{
+                  background: 'rgba(184,72,72,0.15)',
+                  border: '1px solid rgba(184,72,72,0.3)',
+                  color: '#b84848',
+                  cursor: 'pointer',
+                }}
+              >
+                ⏹ إيقاف
+              </button>
+            )}
             {/* Mobile sidebar toggle */}
             <button
               className="md:hidden px-2.5 py-1 rounded-lg text-xs"

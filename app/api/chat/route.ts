@@ -286,6 +286,7 @@ export async function POST(request: NextRequest) {
               `data: ${JSON.stringify({ done: true, user_message_id: userMessageId, assistant_message_id: savedAssistantMsg?.id ?? null })}\n\n`
             )
           )
+          controller.close() // close stream immediately so client knows we're done
           // Task 1: Fire-and-forget — analyze conversation and auto-add/update goals
           analyzeAndUpdateGoals(supabase, session_id, message, dbResponse, cefr_level).catch(() => {})
 
@@ -314,9 +315,7 @@ export async function POST(request: NextRequest) {
               await summarizeSession(supabase, needsSummary, apiKey, model)
             } catch { /* silent */ }
           })()).catch(() => {})
-        } finally {
-          controller.close()
-        }
+        } catch { /* silent — background tasks failed */ }
       }
     },
   })

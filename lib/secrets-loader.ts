@@ -2,7 +2,7 @@ import { createServerClient } from './supabase-server'
 
 let cachedSecrets: Record<string, string> | null = null
 let cacheTime = 0
-const CACHE_TTL = 60_000 // 1 minute
+const CACHE_TTL = 5_000 // 5 seconds — short TTL so setup-page updates take effect quickly
 
 export async function getSecrets(): Promise<Record<string, string>> {
   const now = Date.now()
@@ -27,10 +27,15 @@ export async function getSecrets(): Promise<Record<string, string>> {
 }
 
 export async function getSecret(key: string): Promise<string> {
-  // env var takes priority over Supabase stored secret
-  const envVal = process.env[key]
-  if (envVal) return envVal
-
+  // Supabase secrets take priority over env vars (allows updating via setup page)
   const secrets = await getSecrets()
-  return secrets[key] ?? ''
+  if (secrets[key]) return secrets[key]
+
+  // Fall back to env var
+  return process.env[key] ?? ''
+}
+
+export function clearSecretsCache() {
+  cachedSecrets = null
+  cacheTime = 0
 }

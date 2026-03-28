@@ -4,6 +4,24 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+const POPULAR_MODELS = [
+  'google/gemini-2.0-flash-001',
+  'google/gemini-2.5-flash-preview',
+  'google/gemini-2.5-pro-preview',
+  'openai/gpt-4o',
+  'openai/gpt-4o-mini',
+  'openai/gpt-4.1',
+  'openai/gpt-4.1-mini',
+  'openai/gpt-4.1-nano',
+  'anthropic/claude-sonnet-4-5',
+  'anthropic/claude-haiku-3-5',
+  'meta-llama/llama-3.3-70b-instruct',
+  'meta-llama/llama-3.1-8b-instruct',
+  'mistralai/mistral-nemo',
+  'qwen/qwen-2.5-72b-instruct',
+  'deepseek/deepseek-chat',
+]
+
 interface FieldConfig {
   key: string
   label: string
@@ -11,6 +29,7 @@ interface FieldConfig {
   hint: string
   link?: { url: string; text: string }
   type?: 'password' | 'text'
+  datalist?: boolean
 }
 
 const FIELDS: FieldConfig[] = [
@@ -28,6 +47,7 @@ const FIELDS: FieldConfig[] = [
     placeholder: 'google/gemini-2.0-flash-001',
     hint: 'النموذج المستخدم للمحادثة الرئيسية مع المعلم',
     type: 'text',
+    datalist: true,
   },
   {
     key: 'ANALYSIS_MODEL',
@@ -35,6 +55,7 @@ const FIELDS: FieldConfig[] = [
     placeholder: 'meta-llama/llama-3.1-8b-instruct',
     hint: 'نموذج خفيف للتحليل السريع (تغذية راجعة، أهداف...)',
     type: 'text',
+    datalist: true,
   },
   {
     key: 'TELEGRAM_BOT_TOKEN',
@@ -253,33 +274,54 @@ export default function SetupPage() {
                 </div>
 
                 <div className="relative">
-                  <input
-                    type={field.type === 'password' && !showValues[field.key] ? 'password' : 'text'}
-                    value={values[field.key] ?? ''}
-                    onChange={e => setValues(p => ({ ...p, [field.key]: e.target.value }))}
-                    placeholder={masked[field.key] || field.placeholder}
-                    className="input-field w-full rounded-xl px-4 py-2.5 text-sm"
-                    dir="ltr"
-                    style={{ paddingRight: field.type === 'password' ? '3rem' : undefined }}
-                  />
-                  {field.type === 'password' && (
-                    <button
-                      type="button"
-                      onClick={() => setShowValues(p => ({ ...p, [field.key]: !p[field.key] }))}
-                      className="absolute"
-                      style={{
-                        right: '0.75rem',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: 'var(--text-muted)',
-                        fontSize: '0.75rem',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {showValues[field.key] ? '🙈' : '👁'}
-                    </button>
+                  {field.datalist ? (
+                    <>
+                      <input
+                        id={`datalist-${field.key}`}
+                        type="text"
+                        list={`list-${field.key}`}
+                        className="input-field w-full rounded-xl px-4 py-2.5 text-sm"
+                        placeholder={masked[field.key] || field.placeholder}
+                        value={values[field.key] ?? ''}
+                        onChange={e => setValues(prev => ({ ...prev, [field.key]: e.target.value }))}
+                        dir="ltr"
+                        style={{ background: 'var(--bg-raised)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+                      />
+                      <datalist id={`list-${field.key}`}>
+                        {POPULAR_MODELS.map(m => <option key={m} value={m} />)}
+                      </datalist>
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type={field.type === 'password' && !showValues[field.key] ? 'password' : 'text'}
+                        value={values[field.key] ?? ''}
+                        onChange={e => setValues(p => ({ ...p, [field.key]: e.target.value }))}
+                        placeholder={masked[field.key] || field.placeholder}
+                        className="input-field w-full rounded-xl px-4 py-2.5 text-sm"
+                        dir="ltr"
+                        style={{ paddingRight: field.type === 'password' ? '3rem' : undefined }}
+                      />
+                      {field.type === 'password' && (
+                        <button
+                          type="button"
+                          onClick={() => setShowValues(p => ({ ...p, [field.key]: !p[field.key] }))}
+                          className="absolute"
+                          style={{
+                            right: '0.75rem',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            color: 'var(--text-muted)',
+                            fontSize: '0.75rem',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {showValues[field.key] ? '🙈' : '👁'}
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
 

@@ -65,19 +65,38 @@ Return ONLY valid JSON in this exact format:
   ]
 }`
 
-  const messages = [{ role: 'user' as const, content: prompt }]
+  const messages = [
+    {
+      role: 'system' as const,
+      content: 'You are a language teacher. Respond ONLY with valid JSON, no markdown code blocks, no explanation. Keep responses concise.'
+    },
+    { role: 'user' as const, content: prompt }
+  ]
   let raw = ''
 
   try {
-    const stream = await streamChatCompletion(apiKey, model, messages)
-    const reader = stream.getReader()
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      raw += value
-    }
+    const streamPromise = (async () => {
+      const stream = await streamChatCompletion(apiKey!, model!, messages)
+      const reader = stream.getReader()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        raw += value
+      }
+    })()
 
-    const match = raw.match(/\{[\s\S]*\}/)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Lesson generation timed out (30s)')), 30000)
+    )
+
+    await Promise.race([streamPromise, timeoutPromise])
+
+    console.log('[Lesson] Raw response length:', raw.length, '| First 100:', raw.slice(0, 100))
+
+    // Try extracting JSON from markdown code block first
+    const mdMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+    const jsonStr = mdMatch ? mdMatch[1] : raw
+    const match = jsonStr.match(/\{[\s\S]*\}/)
     if (!match) throw new Error('No JSON found in response')
 
     const lesson = JSON.parse(match[0])
