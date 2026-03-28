@@ -1,24 +1,24 @@
 #!/bin/bash
-# deploy.sh — تحديث التطبيق على الـ VPS
-# الاستخدام: ssh user@vps "cd /var/www/tr-ar && bash deploy.sh"
+# deploy.sh — تحديث TR_AR على الـ VPS
+# الاستخدام: ssh user@vps "cd /opt/tr-ar && bash deploy.sh"
 
 set -e
 
-echo "📦 جلب آخر تحديثات..."
+GREEN='\033[0;32m'; NC='\033[0m'
+ok() { echo -e "${GREEN}✓ $1${NC}"; }
+
+echo "🔄 جلب آخر تحديثات..."
 git pull origin main
+ok "git pull"
 
-echo "📥 تثبيت الحزم..."
-npm ci --production=false
+echo "🔨 بناء الصورة..."
+docker compose -f docker-compose.prod.yml build --no-cache
+ok "build"
 
-echo "🔨 البناء..."
-npm run build
+echo "🚀 إعادة التشغيل..."
+docker compose -f docker-compose.prod.yml up -d --force-recreate
+ok "deployed"
 
-echo "📋 نسخ الملفات الثابتة..."
-cp -r public .next/standalone/public
-cp -r .next/static .next/standalone/.next/static
-
-echo "🔄 إعادة تشغيل PM2..."
-pm2 reload ecosystem.config.js --update-env
-
-echo "✅ تم النشر بنجاح!"
-pm2 status tr-ar
+echo ""
+echo "📋 حالة الحاوية:"
+docker ps --filter name=tr-ar --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"

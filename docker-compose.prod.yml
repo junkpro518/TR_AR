@@ -1,0 +1,21 @@
+services:
+  tr-ar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tr-ar:latest
+    container_name: tr-ar
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - traefik-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tr-ar.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.tr-ar.entrypoints=websecure"
+      - "traefik.http.routers.tr-ar.tls.certresolver=letsencrypt"
+      - "traefik.http.services.tr-ar.loadbalancer.server.port=3000"
+
+networks:
+  traefik-net:
+    external: true
