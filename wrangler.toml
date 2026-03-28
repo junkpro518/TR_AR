@@ -1,0 +1,22 @@
+name = "tr-ar"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+main = ".open-next/worker.js"
+assets = { directory = ".open-next/assets", binding = "ASSETS" }
+
+[vars]
+# متغيرات البيئة تُضبط في Cloudflare Dashboard → Settings → Environment Variables
+# OPENROUTER_API_KEY = ""
+# NEXT_PUBLIC_SUPABASE_URL = ""
+# NEXT_PUBLIC_SUPABASE_ANON_KEY = ""
+# SUPABASE_SERVICE_ROLE_KEY = ""
+# CHAT_MODEL = "google/gemini-2.0-flash-001"
+# ANALYSIS_MODEL = "meta-llama/llama-3.1-8b-instruct"
+# TELEGRAM_BOT_TOKEN = ""
+# TELEGRAM_CHAT_ID = ""
+# MISTRAL_API_KEY = ""
+# CRON_SECRET = "tr_ar_cron_2024"
+# NEXT_PUBLIC_APP_URL = ""
+
+[triggers]
+crons = ["0 20 * * *"]
