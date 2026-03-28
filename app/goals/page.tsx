@@ -179,7 +179,7 @@ export default function GoalsPage() {
                             {goal.title}
                           </p>
                           {goal.is_auto && (
-                            <span className="badge badge-gold text-xs mt-1">تلقائي</span>
+                            <span className="badge badge-gold text-xs mt-1">من المعلم 🤖</span>
                           )}
                           {goal.progress > 0 && (
                             <div className="mt-2">

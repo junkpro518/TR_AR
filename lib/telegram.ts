@@ -6,21 +6,26 @@
  * 2. Start a chat with your bot, then visit:
  *    https://api.telegram.org/bot<TOKEN>/getUpdates
  *    to find your personal chat_id from the "from.id" field
- * 3. Set environment variables in .env.local:
+ * 3. Set environment variables in .env.local (or via /setup page):
  *    TELEGRAM_BOT_TOKEN=<your bot token>
  *    TELEGRAM_CHAT_ID=<your chat id>
  * 4. Register the webhook so Telegram sends button presses to your app:
  *    https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<your-domain>/api/telegram
  */
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
-const CHAT_ID = process.env.TELEGRAM_CHAT_ID
+import { getSecret } from './secrets-loader'
 
 export async function sendTelegramMessage(
   text: string,
   replyMarkup?: object
 ): Promise<boolean> {
-  if (!BOT_TOKEN || !CHAT_ID) return false
+  const BOT_TOKEN = await getSecret('TELEGRAM_BOT_TOKEN')
+  const CHAT_ID = await getSecret('TELEGRAM_CHAT_ID')
+
+  if (!BOT_TOKEN || !CHAT_ID) {
+    console.log('[Telegram] Not configured — skipping')
+    return false
+  }
 
   const res = await fetch(
     `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
@@ -35,6 +40,10 @@ export async function sendTelegramMessage(
       }),
     }
   )
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}))
+    console.error('[Telegram] sendMessage failed:', res.status, errBody)
+  }
   return res.ok
 }
 
@@ -42,6 +51,7 @@ export async function answerCallbackQuery(
   callbackQueryId: string,
   text?: string
 ): Promise<boolean> {
+  const BOT_TOKEN = await getSecret('TELEGRAM_BOT_TOKEN')
   if (!BOT_TOKEN) return false
 
   const res = await fetch(
@@ -63,6 +73,7 @@ export async function editMessageReplyMarkup(
   chatId: string | number,
   messageId: number
 ): Promise<boolean> {
+  const BOT_TOKEN = await getSecret('TELEGRAM_BOT_TOKEN')
   if (!BOT_TOKEN) return false
 
   const res = await fetch(

@@ -133,9 +133,29 @@ export async function POST(request: NextRequest) {
       } finally {
         reader.releaseLock()
         try {
+          // استخرج GOAL marker إذا وجد
+          const goalMatch = fullResponse.match(/\[GOAL:\s*([\s\S]+?)\]/)
+          let cleanResponse = fullResponse
+
+          if (goalMatch) {
+            const goalTitle = goalMatch[1].trim()
+            cleanResponse = fullResponse.replace(goalMatch[0], '').trim()
+
+            // أضف الهدف للقاعدة بشكل مستقل
+            Promise.resolve(
+              supabase.from('goals').insert({
+                language: language,
+                title: goalTitle,
+                is_auto: true,
+                progress: 0,
+                completed: false,
+              })
+            ).catch(() => {}) // fire-and-forget
+          }
+
           const { data: savedAssistantMsg } = await supabase
             .from('messages')
-            .insert({ session_id, role: 'assistant', content: fullResponse, xp_earned: 0 })
+            .insert({ session_id, role: 'assistant', content: cleanResponse, xp_earned: 0 })
             .select('id')
             .single()
           controller.enqueue(
@@ -144,7 +164,7 @@ export async function POST(request: NextRequest) {
             )
           )
           // Task 1: Fire-and-forget — analyze conversation and auto-add/update goals
-          analyzeAndUpdateGoals(supabase, session_id, message, fullResponse, cefr_level).catch(() => {})
+          analyzeAndUpdateGoals(supabase, session_id, message, cleanResponse, cefr_level).catch(() => {})
         } finally {
           controller.close()
         }
