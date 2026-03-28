@@ -3,6 +3,8 @@
 import { useState, useCallback, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { parseQuiz } from '@/lib/quiz-parser'
+import { QuizBlock } from './QuizBlock'
 
 interface MessageBubbleProps {
   role: 'user' | 'assistant'
@@ -17,6 +19,12 @@ const TTS_LANG: Record<string, string> = {
 
 export function MessageBubble({ role, content, isStreaming, language = 'turkish' }: MessageBubbleProps) {
   const isUser = role === 'user'
+  const hasWebSearch = content.startsWith('[WEB_SEARCH]\n')
+  const rawContent = hasWebSearch ? content.replace('[WEB_SEARCH]\n', '') : content
+
+  // Parse quiz from content
+  const { quiz, cleanContent } = parseQuiz(rawContent)
+  const displayContent = cleanContent
   const [speaking, setSpeaking] = useState(false)
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -32,7 +40,7 @@ export function MessageBubble({ role, content, isStreaming, language = 'turkish'
   const speakWithWebSpeech = useCallback(() => {
     if (!('speechSynthesis' in window)) { setSpeaking(false); return }
     window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(content)
+    const utterance = new SpeechSynthesisUtterance(displayContent)
     utterance.lang = TTS_LANG[language] ?? 'tr-TR'
     utterance.rate = 0.9
     utterance.pitch = 1
@@ -40,10 +48,10 @@ export function MessageBubble({ role, content, isStreaming, language = 'turkish'
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = () => setSpeaking(false)
     window.speechSynthesis.speak(utterance)
-  }, [content, language])
+  }, [displayContent, language])
 
   const speak = useCallback(async () => {
-    if (!content || isStreaming) return
+    if (!displayContent || isStreaming) return
 
     if (speaking) {
       stopSpeaking()
@@ -57,7 +65,7 @@ export function MessageBubble({ role, content, isStreaming, language = 'turkish'
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: content, language: 'tr' }),
+        body: JSON.stringify({ text: displayContent, language: 'tr' }),
       })
 
       if (res.ok && res.headers.get('Content-Type')?.includes('audio')) {
@@ -84,7 +92,7 @@ export function MessageBubble({ role, content, isStreaming, language = 'turkish'
     }
 
     speakWithWebSpeech()
-  }, [content, isStreaming, speaking, stopSpeaking, speakWithWebSpeech])
+  }, [displayContent, isStreaming, speaking, stopSpeaking, speakWithWebSpeech])
 
   const hasTTS = typeof window !== 'undefined' && 'speechSynthesis' in window
 
@@ -214,7 +222,7 @@ export function MessageBubble({ role, content, isStreaming, language = 'turkish'
                   ),
                 }}
               >
-                {content}
+                {displayContent}
               </ReactMarkdown>
             </div>
           )}
@@ -238,8 +246,21 @@ export function MessageBubble({ role, content, isStreaming, language = 'turkish'
           )}
         </div>
 
+        {/* Quiz block */}
+        {!isUser && quiz && !isStreaming && (
+          <QuizBlock quiz={quiz} />
+        )}
+
+        {/* Web search badge */}
+        {!isUser && hasWebSearch && (
+          <div className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg w-fit"
+            style={{ background: 'var(--bg-raised)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+            🔍 <span>نتيجة بحث إنترنت</span>
+          </div>
+        )}
+
         {/* TTS button — only for assistant, only when done streaming */}
-        {!isUser && !isStreaming && content && hasTTS && (
+        {!isUser && !isStreaming && displayContent && hasTTS && (
           <button
             onClick={speak}
             aria-label={speaking ? 'إيقاف' : 'استمع'}

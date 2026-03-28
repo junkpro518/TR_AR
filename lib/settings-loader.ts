@@ -13,6 +13,7 @@ export interface UserConfig {
   daily_goal_minutes: number
   preferred_topics: string[]
   telegram_enabled: boolean
+  web_search_enabled: boolean
 }
 
 export interface AppSettings {
@@ -33,6 +34,7 @@ const DEFAULT_USER: UserConfig = {
   daily_goal_minutes: 30,
   preferred_topics: [],
   telegram_enabled: false,
+  web_search_enabled: false,
 }
 
 export async function loadAppSettings(): Promise<AppSettings> {

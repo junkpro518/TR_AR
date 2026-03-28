@@ -5,7 +5,80 @@ import { buildSystemPrompt } from '@/lib/prompts'
 import { getWeaknessReport } from '@/lib/weakness-analyzer'
 import { analyzeAndUpdateGoals } from '@/lib/goal-analyzer'
 import { loadAppSettings } from '@/lib/settings-loader'
+import { getSecret } from '@/lib/secrets-loader'
 import type { ChatRequest } from '@/lib/types'
+
+async function runWebSearchIfNeeded(
+  message: string,
+  webSearchEnabled: boolean,
+): Promise<{ searchResults: string; searchQuery: string | null }> {
+  if (!webSearchEnabled) return { searchResults: '', searchQuery: null }
+
+  const SERPER_KEY = await getSecret('SERPER_API_KEY')
+  if (!SERPER_KEY) return { searchResults: '', searchQuery: null }
+
+  const OPENROUTER_API_KEY = await getSecret('OPENROUTER_API_KEY')
+  const ANALYSIS_MODEL = await getSecret('ANALYSIS_MODEL') || process.env.ANALYSIS_MODEL || 'meta-llama/llama-3.1-8b-instruct'
+
+  if (!OPENROUTER_API_KEY) return { searchResults: '', searchQuery: null }
+
+  try {
+    const checkRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: ANALYSIS_MODEL,
+        messages: [{
+          role: 'user',
+          content: `هل هذا السؤال يحتاج بحثاً في الإنترنت لإجابة دقيقة (مثلاً: معلومة حديثة، حدث، شخص، مكان، إحصاء)؟
+سؤال: "${message}"
+إذا نعم، اكتب فقط: SEARCH: [استعلام البحث بالإنجليزية]
+إذا لا، اكتب فقط: NO`,
+        }],
+        max_tokens: 50,
+        temperature: 0,
+      }),
+    })
+
+    if (!checkRes.ok) return { searchResults: '', searchQuery: null }
+    const checkData = await checkRes.json()
+    const checkText = checkData.choices?.[0]?.message?.content?.trim() ?? 'NO'
+
+    if (!checkText.startsWith('SEARCH:')) return { searchResults: '', searchQuery: null }
+
+    const query = checkText.replace('SEARCH:', '').trim()
+
+    // ابحث
+    const searchRes = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': SERPER_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ q: query, num: 3, gl: 'tr', hl: 'ar' }),
+    })
+
+    if (!searchRes.ok) return { searchResults: '', searchQuery: query }
+
+    const searchData = await searchRes.json()
+    const snippets = (searchData.organic ?? []).slice(0, 3).map((r: { title: string; snippet: string }) =>
+      `- ${r.title}: ${r.snippet}`
+    ).join('\n')
+
+    const answer = searchData.answerBox?.answer ?? searchData.answerBox?.snippet ?? ''
+    const combined = answer ? `${answer}\n\n${snippets}` : snippets
+
+    return {
+      searchResults: combined ? `\n\n[نتائج بحث الإنترنت عن "${query}"]:\n${combined}\n[نهاية نتائج البحث]\n` : '',
+      searchQuery: query,
+    }
+  } catch {
+    return { searchResults: '', searchQuery: null }
+  }
+}
 
 export async function POST(request: NextRequest) {
   const body: ChatRequest = await request.json()
@@ -47,6 +120,12 @@ export async function POST(request: NextRequest) {
     getWeaknessReport().catch(() => null),
   ])
 
+  // بحث إنترنت إذا مفعّل
+  const { searchResults, searchQuery } = await runWebSearchIfNeeded(
+    message,
+    appSettings?.user?.web_search_enabled ?? false,
+  )
+
   // Use cefr_override if set in user settings
   const effectiveCefrLevel = appSettings?.user.cefr_override
     ? (appSettings.user.cefr_override as typeof cefr_level)
@@ -66,6 +145,11 @@ export async function POST(request: NextRequest) {
     preferred_topics: appSettings?.user.preferred_topics,
   })
 
+  // أضف نتائج البحث للـ system prompt إذا وجدت
+  const finalSystemPrompt = searchResults
+    ? systemPrompt + '\n\n' + searchResults
+    : systemPrompt
+
   // Fetch recent messages for context (last 20)
   const { data: recentMessages } = await supabase
     .from('messages')
@@ -77,7 +161,7 @@ export async function POST(request: NextRequest) {
   const contextMessages = (recentMessages ?? []).reverse()
 
   const messages = [
-    { role: 'system' as const, content: systemPrompt },
+    { role: 'system' as const, content: finalSystemPrompt },
     ...contextMessages
       .filter(m => m.role === 'user' || m.role === 'assistant')
       .map(m => ({
@@ -153,9 +237,13 @@ export async function POST(request: NextRequest) {
             ).catch(() => {}) // fire-and-forget
           }
 
+          const messageToSave = searchQuery
+            ? `[WEB_SEARCH]\n${cleanResponse}`
+            : cleanResponse
+
           const { data: savedAssistantMsg } = await supabase
             .from('messages')
-            .insert({ session_id, role: 'assistant', content: cleanResponse, xp_earned: 0 })
+            .insert({ session_id, role: 'assistant', content: messageToSave, xp_earned: 0 })
             .select('id')
             .single()
           controller.enqueue(

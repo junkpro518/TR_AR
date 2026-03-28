@@ -10,6 +10,8 @@ type ResponseStyle = 'casual' | 'formal'
 type CorrectionStrictness = 'gentle' | 'moderate' | 'strict'
 type VocabRate = 'slow' | 'medium' | 'fast'
 type FocusArea = 'grammar' | 'vocabulary' | 'conversation' | 'pronunciation'
+type TeachingLanguageMix = 'arabic_heavy' | 'balanced' | 'turkish_heavy'
+type QuizFrequency = 'never' | 'sometimes' | 'often'
 
 interface UserSettings {
   cefr_override: CEFRLevel | ''
@@ -17,6 +19,7 @@ interface UserSettings {
   telegram_chat_id: string
   telegram_notifications: boolean
   preferred_topics: string[]
+  web_search_enabled: boolean
 }
 
 interface TeacherSettings {
@@ -25,6 +28,8 @@ interface TeacherSettings {
   vocab_rate: VocabRate
   focus_areas: FocusArea[]
   custom_instructions: string
+  teaching_language_mix: TeachingLanguageMix
+  quiz_frequency: QuizFrequency
 }
 
 interface PendingState {
@@ -41,6 +46,8 @@ const TEACHER_SETTING_LABELS: Record<string, string> = {
   vocab_rate: 'معدل إدخال المفردات',
   focus_areas: 'مجالات التركيز',
   custom_instructions: 'تعليمات مخصصة',
+  teaching_language_mix: 'مزيج اللغتين',
+  quiz_frequency: 'تكرار الاختبارات',
 }
 
 const RESPONSE_STYLE_LABELS: Record<ResponseStyle, string> = {
@@ -61,10 +68,22 @@ const VOCAB_RATE_LABELS: Record<VocabRate, string> = {
 }
 
 const FOCUS_AREA_LABELS: Record<FocusArea, string> = {
-  grammar: 'القواعد النحوية',
-  vocabulary: 'المفردات',
-  conversation: 'المحادثة',
-  pronunciation: 'النطق',
+  grammar: '📖 القواعد النحوية',
+  vocabulary: '📝 المفردات',
+  conversation: '💬 المحادثة',
+  pronunciation: '🔊 النطق',
+}
+
+const MIX_LABELS: Record<string, string> = {
+  arabic_heavy: 'عربي أساسي — شرح أكثر بالعربية',
+  balanced: 'متوازن — عربي وتركي بالتساوي',
+  turkish_heavy: 'تركي أساسي — غمر في اللغة',
+}
+
+const QUIZ_FREQ_LABELS: Record<string, string> = {
+  never: 'أبداً — لا اختبارات',
+  sometimes: 'أحياناً — عند تعلم قاعدة جديدة',
+  often: 'كثيراً — بعد كل موضوع',
 }
 
 // ─── Default values ───────────────────────────────────────────────────────────
@@ -75,6 +94,7 @@ const DEFAULT_USER: UserSettings = {
   telegram_chat_id: '',
   telegram_notifications: false,
   preferred_topics: [],
+  web_search_enabled: false,
 }
 
 const DEFAULT_TEACHER: TeacherSettings = {
@@ -83,6 +103,8 @@ const DEFAULT_TEACHER: TeacherSettings = {
   vocab_rate: 'medium',
   focus_areas: ['conversation'],
   custom_instructions: '',
+  teaching_language_mix: 'balanced',
+  quiz_frequency: 'sometimes',
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -109,6 +131,7 @@ export default function SettingsPage() {
           telegram_chat_id: data.telegram_chat_id?.value ?? data.telegram_chat_id ?? '',
           telegram_notifications: data.telegram_notifications?.value ?? data.telegram_notifications ?? false,
           preferred_topics: data.preferred_topics?.value ?? data.preferred_topics ?? [],
+          web_search_enabled: data.web_search_enabled?.value ?? data.web_search_enabled ?? false,
         }))
 
         const pendingMap: PendingState = {}
@@ -124,6 +147,8 @@ export default function SettingsPage() {
           vocab_rate: data.vocab_rate?.value ?? data.vocab_rate ?? 'medium',
           focus_areas: data.focus_areas?.value ?? data.focus_areas ?? ['conversation'],
           custom_instructions: data.custom_instructions?.value ?? data.custom_instructions ?? '',
+          teaching_language_mix: data.teaching_language_mix?.value ?? data.teaching_language_mix ?? 'balanced',
+          quiz_frequency: data.quiz_frequency?.value ?? data.quiz_frequency ?? 'sometimes',
         }))
       } catch {
         // Silently use defaults if settings haven't been set yet
@@ -250,6 +275,23 @@ export default function SettingsPage() {
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-8">
 
+        {/* ── API Keys Setup Link ── */}
+        <div className="max-w-xl mx-auto">
+          <Link
+            href="/setup"
+            className="flex items-center justify-between w-full card p-4 transition-all"
+            style={{ textDecoration: 'none', borderColor: 'var(--border-gold)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-raised)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-surface)')}
+          >
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--gold-light)' }}>🔑 إعداد المفاتيح والتوكنات</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>OpenRouter · Telegram · Mistral</p>
+            </div>
+            <span style={{ color: 'var(--gold)' }}>←</span>
+          </Link>
+        </div>
+
         {/* ── Section A: User Settings ── */}
         <section>
           <SectionTitle
@@ -341,6 +383,39 @@ export default function SettingsPage() {
                 </div>
                 <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                   {user.telegram_notifications ? 'مفعّل — ستتلقى تذكيرات يومية' : 'معطّل'}
+                </span>
+              </label>
+            </SettingCard>
+
+            {/* Web Search Toggle */}
+            <SettingCard
+              label="البحث عبر الإنترنت"
+              hint="المعلم يبحث في الإنترنت عند الحاجة — يتطلب SERPER_API_KEY في الإعداد"
+            >
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div
+                  onClick={() => {
+                    const next = !user.web_search_enabled
+                    setUser(u => ({ ...u, web_search_enabled: next }))
+                    saveUserSetting('web_search_enabled', next)
+                  }}
+                  className="relative w-11 h-6 rounded-full transition-colors"
+                  style={{
+                    background: user.web_search_enabled ? 'var(--gold)' : 'var(--bg-raised)',
+                    border: '1px solid var(--border)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span
+                    className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full transition-transform"
+                    style={{
+                      background: 'var(--text-primary)',
+                      transform: user.web_search_enabled ? 'translateX(-20px)' : 'translateX(0)',
+                    }}
+                  />
+                </div>
+                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  {user.web_search_enabled ? '🔍 مفعّل — المعلم يبحث عند الحاجة' : 'معطّل'}
                 </span>
               </label>
             </SettingCard>
@@ -515,6 +590,46 @@ export default function SettingsPage() {
                     }}
                   >
                     {FOCUS_AREA_LABELS[area]}
+                  </button>
+                ))}
+              </div>
+            </SettingCard>
+
+            {/* Language Mix */}
+            <SettingCard label="مزيج اللغتين" pendingBadge={pending.teaching_language_mix}>
+              <div className="flex flex-col gap-2">
+                {(['arabic_heavy', 'balanced', 'turkish_heavy'] as const).map(mix => (
+                  <button
+                    key={mix}
+                    onClick={() => {
+                      if (pending.teaching_language_mix) return
+                      setTeacher(t => ({ ...t, teaching_language_mix: mix }))
+                      proposeTeacherSetting('teaching_language_mix', mix, `تغيير مزيج اللغة إلى: ${MIX_LABELS[mix]}`)
+                    }}
+                    className={teacher.teaching_language_mix === mix ? 'btn-gold' : 'btn-ghost'}
+                    style={{ fontSize: '0.8rem', padding: '0.35rem 0.9rem', textAlign: 'right', opacity: pending.teaching_language_mix ? 0.6 : 1, cursor: pending.teaching_language_mix ? 'not-allowed' : 'pointer' }}
+                  >
+                    {MIX_LABELS[mix]}
+                  </button>
+                ))}
+              </div>
+            </SettingCard>
+
+            {/* Quiz Frequency */}
+            <SettingCard label="تكرار الاختبارات" pendingBadge={pending.quiz_frequency}>
+              <div className="flex flex-col gap-2">
+                {(['never', 'sometimes', 'often'] as const).map(freq => (
+                  <button
+                    key={freq}
+                    onClick={() => {
+                      if (pending.quiz_frequency) return
+                      setTeacher(t => ({ ...t, quiz_frequency: freq }))
+                      proposeTeacherSetting('quiz_frequency', freq, `تغيير تكرار الاختبارات إلى: ${QUIZ_FREQ_LABELS[freq]}`)
+                    }}
+                    className={teacher.quiz_frequency === freq ? 'btn-gold' : 'btn-ghost'}
+                    style={{ fontSize: '0.8rem', padding: '0.35rem 0.9rem', textAlign: 'right', opacity: pending.quiz_frequency ? 0.6 : 1, cursor: pending.quiz_frequency ? 'not-allowed' : 'pointer' }}
+                  >
+                    {QUIZ_FREQ_LABELS[freq]}
                   </button>
                 ))}
               </div>

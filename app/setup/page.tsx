@@ -60,6 +60,14 @@ const FIELDS: FieldConfig[] = [
     link: { url: 'https://console.mistral.ai/', text: 'احصل على مفتاح' },
     type: 'password',
   },
+  {
+    key: 'SERPER_API_KEY',
+    label: 'Serper API Key (بحث إنترنت)',
+    placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    hint: 'للبحث عبر Google — احصل على مفتاح مجاني من serper.dev (100 بحث/شهر)',
+    link: { url: 'https://serper.dev', text: 'احصل على مفتاح' },
+    type: 'password' as const,
+  },
 ]
 
 export default function SetupPage() {
