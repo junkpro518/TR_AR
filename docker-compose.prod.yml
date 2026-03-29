@@ -4,55 +4,43 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        # NEXT_PUBLIC_* vars baked in at build time — must match .env values
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
         NEXT_PUBLIC_APP_URL: https://tr-ar.junkpro.duckdns.org
+
     image: tr-ar:latest
     container_name: tr-ar
     restart: unless-stopped
-    # Runtime secrets (server-side only — never exposed to browser)
+
+    env_file:
+      - .env
+
     environment:
+      - NODE_ENV=production
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
-      - SERPER_API_KEY=${SERPER_API_KEY}
-      - CHAT_MODEL=${CHAT_MODEL:-google/gemini-2.0-flash-001}
-      - ANALYSIS_MODEL=${ANALYSIS_MODEL:-meta-llama/llama-3.1-8b-instruct}
-      - CRON_SECRET=${CRON_SECRET}
       - NEXT_PUBLIC_APP_URL=https://tr-ar.junkpro.duckdns.org
-      # Re-expose NEXT_PUBLIC vars at runtime for SSR
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+
     networks:
-      - traefik-net
+      - proxy
+
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+
     labels:
       - "traefik.enable=true"
-      # Tell Traefik which network to use
-      - "traefik.docker.network=proxy"
-      # HTTPS router
       - "traefik.http.routers.tr-ar.rule=Host(`tr-ar.junkpro.duckdns.org`)"
       - "traefik.http.routers.tr-ar.entrypoints=websecure"
       - "traefik.http.routers.tr-ar.tls.certresolver=myresolver"
-      # HTTP → HTTPS redirect router
-      - "traefik.http.routers.tr-ar-http.rule=Host(`tr-ar.junkpro.duckdns.org`)"
-      - "traefik.http.routers.tr-ar-http.entrypoints=web"
-      - "traefik.http.routers.tr-ar-http.middlewares=redirect-https"
-      - "traefik.http.middlewares.redirect-https.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.redirect-https.redirectscheme.permanent=true"
-      # Service port
       - "traefik.http.services.tr-ar.loadbalancer.server.port=3000"
-      # Streaming / SSE support — disable buffering
-      - "traefik.http.middlewares.tr-ar-headers.headers.customresponseheaders.X-Accel-Buffering=no"
-      - "traefik.http.routers.tr-ar.middlewares=tr-ar-headers"
+
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   proxy:
