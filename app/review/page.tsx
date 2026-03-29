@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import type { VocabCard, Language } from '@/lib/types'
 import { calculateNextReview, type SRSQuality } from '@/lib/srs'
 
 type ReviewPhase = 'loading' | 'empty' | 'question' | 'answer' | 'done'
 
-export default function ReviewPage() {
+function ReviewPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const language = (searchParams.get('language') ?? 'turkish') as Language
@@ -259,5 +259,13 @@ export default function ReviewPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ReviewPage() {
+  return (
+    <Suspense>
+      <ReviewPageContent />
+    </Suspense>
   )
 }

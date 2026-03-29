@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import type { Language } from '@/lib/types'
 
@@ -22,7 +22,7 @@ interface Goal {
   milestones?: Milestone[]
 }
 
-export default function GoalsPage() {
+function GoalsPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const language = (searchParams.get('language') ?? 'turkish') as Language
@@ -344,5 +344,13 @@ export default function GoalsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function GoalsPage() {
+  return (
+    <Suspense>
+      <GoalsPageContent />
+    </Suspense>
   )
 }

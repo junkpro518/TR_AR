@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import type { Language } from '@/lib/types'
 
@@ -77,7 +77,7 @@ function MessageBubble({ m }: { m: MessageRow }) {
   )
 }
 
-export default function HistoryPage() {
+function HistoryPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const language = (searchParams.get('language') ?? 'turkish') as Language
@@ -221,5 +221,13 @@ export default function HistoryPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense>
+      <HistoryPageContent />
+    </Suspense>
   )
 }

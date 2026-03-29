@@ -529,7 +529,7 @@ export default function SettingsPage() {
             <span style={{ fontSize: '1rem' }}>ℹ️</span>
             <span>
               عند تغيير أي إعداد هنا، ستصلك رسالة Telegram لتأكيد أو رفض التعديل.
-              الإعداد يبقى في حالة "انتظار" حتى تستجيب.
+              الإعداد يبقى في حالة &quot;انتظار&quot; حتى تستجيب.
             </span>
           </div>
 

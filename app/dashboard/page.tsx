@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { Language } from '@/lib/types'
@@ -36,7 +36,7 @@ const GRAMMAR_LABELS: Record<string, string> = {
   question_formation: 'صياغة السؤال', other: 'أخرى',
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const language = (searchParams.get('language') ?? 'turkish') as Language
@@ -367,5 +367,13 @@ export default function DashboardPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardPageContent />
+    </Suspense>
   )
 }

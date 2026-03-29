@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import type { Language, CEFRLevel } from '@/lib/types'
 
@@ -15,7 +15,7 @@ interface LessonData {
 
 type PageState = 'idle' | 'loading' | 'lesson' | 'exercises'
 
-export default function LessonsPage() {
+function LessonsPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const language = (searchParams.get('language') ?? 'turkish') as Language
@@ -336,5 +336,13 @@ export default function LessonsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function LessonsPage() {
+  return (
+    <Suspense>
+      <LessonsPageContent />
+    </Suspense>
   )
 }

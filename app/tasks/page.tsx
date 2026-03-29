@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import type { Task, TaskFeedback, Language, CEFRLevel } from '@/lib/types'
 
@@ -16,7 +16,7 @@ const TYPE_LABELS: Record<string, string> = {
   daily_scenario: 'موقف يومي',
 }
 
-export default function TasksPage() {
+function TasksPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const language = (searchParams.get('language') ?? 'turkish') as Language
@@ -363,5 +363,13 @@ export default function TasksPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function TasksPage() {
+  return (
+    <Suspense>
+      <TasksPageContent />
+    </Suspense>
   )
 }

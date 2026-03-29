@@ -1,0 +1,41 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Build output
+.next
+.open-next
+out
+build
+
+# Environment files (injected at build/runtime)
+.env
+.env.local
+.env.*.local
+
+# Dev/test files
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+vitest.config.ts
+vitest.setup.ts
+coverage
+
+# Git
+.git
+.gitignore
+
+# Docs and config not needed at runtime
+README.md
+CLAUDE.md
+docs/
+.claude
+.claude\ copy/
+supabase/
+
+# Misc
+.DS_Store
+*.pem
+.vercel
+.wrangler
+wrangler.toml
