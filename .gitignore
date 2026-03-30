@@ -44,6 +44,9 @@ next-env.d.ts
 # brainstorm artifacts
 .superpowers/
 
+# MCP config — may contain API tokens / secrets
+.mcp.json
+
 # cloudflare / opennextjs
 .open-next/
 .wrangler/
