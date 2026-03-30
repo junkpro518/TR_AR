@@ -47,6 +47,8 @@ interface PromptParams {
   total_learning_days?: number
   // Custom system prompt base (overrides default intro)
   system_prompt_base?: string
+  // Whether this is the very first message in this session
+  is_new_session?: boolean
 }
 
 function buildMemorySection(
@@ -153,13 +155,33 @@ export function buildSystemPrompt(params: PromptParams): string {
   // Base text: يمكن تجاوزه بإعداد مخصص
   const baseIntro = params.system_prompt_base && params.system_prompt_base.trim()
     ? params.system_prompt_base.trim()
-    : `أنت معلم لغة تركية دافئ ومشجع تحادث طالبك بالعربية والتركية معاً.`
+    : `أنت معلم لغة تركية دافئ وذكي تحادث طالبك بالعربية والتركية معاً.`
+
+  // قسم البداية الطبيعية للمحادثة الجديدة
+  const hasHistory = params.session_summaries && params.session_summaries.length > 0
+  const newSessionSection = params.is_new_session
+    ? `\n\n## بداية محادثة جديدة — مهم جداً
+هذه أول رسالة في هذه المحادثة. ${hasHistory
+      ? `أنت تعرف الطالب من جلسات سابقة (انظر قسم "ذاكرة الجلسات" أعلاه). لا تبدأ من الصفر.`
+      : `لا تعرف شيئاً عن الطالب بعد.`}
+
+**لا تبدأ بالتعليم المباشر أو بأي درس.** بدلاً من ذلك:
+${hasHistory
+      ? `- رحّب به كصديق قديم بأسلوب دافئ ومختصر
+- اسأله كيف حاله أو ماذا يريد أن يفعل اليوم
+- يمكنك الإشارة بشكل طبيعي لشيء من محادثة سابقة (كلمة تعلمها، موضوع ناقشتموه)
+- دع التعليم يأتي من سياق المحادثة أو حين يطلبه الطالب صراحةً`
+      : `- قدّم نفسك بجملتين بأسلوب دافئ وغير رسمي
+- اسأله عن اسمه وعن سبب تعلمه للتركية
+- اكتشف مستواه بشكل طبيعي عبر الحوار، لا عبر اختبار رسمي
+- دع التعليم يأتي من سياق المحادثة أو حين يطلبه الطالب صراحةً`}`
+    : ''
 
   return `${baseIntro}
 
 مستوى CEFR: ${params.cefr_level}
 ${CEFR_INSTRUCTIONS_AR[params.cefr_level]}
-${vocabSection}${goalsSection}${errorsSection}${weaknessSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${teacherAdaptations}${customSection}${memorySection}
+${vocabSection}${goalsSection}${errorsSection}${weaknessSection}${topicSection}${styleSection}${strictnessSection}${vocabRateSection}${topicsSection}${teacherAdaptations}${customSection}${memorySection}${newSessionSection}
 
 قواعد التكيف:
 - اكتب الرد بالعربية الكاملة أولاً في سطر واضح

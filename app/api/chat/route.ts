@@ -115,8 +115,8 @@ export async function POST(request: NextRequest) {
     ? [...new Set(allSessions.flatMap((s: { common_errors?: string[] }) => s.common_errors ?? []))].slice(0, 10)
     : []
 
-  // Load settings, weakness report, and session summaries in parallel (all non-critical)
-  const [appSettings, weaknessReport, sessionSummaries] = await Promise.all([
+  // Load settings, weakness report, session summaries, and recent messages in parallel
+  const [appSettings, weaknessReport, sessionSummaries, recentMessagesResult] = await Promise.all([
     loadAppSettings().catch(() => null),
     getWeaknessReport().catch(() => null),
     Promise.resolve(
@@ -127,6 +127,15 @@ export async function POST(request: NextRequest) {
         .order('created_at', { ascending: false })
         .limit(8)
     ).then(r => (r.data ?? []) as SessionSummary[]).catch(() => [] as SessionSummary[]),
+    // Fetch recent messages here so is_new_session is known before building the prompt
+    Promise.resolve(
+      supabase
+        .from('messages')
+        .select('role, content')
+        .eq('session_id', session_id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+    ).then(r => (r.data ?? []) as Array<{ role: string; content: string }>).catch(() => [] as Array<{ role: string; content: string }>),
   ])
 
   // بحث إنترنت إذا مفعّل (من الإعدادات أو من override في الطلب)
@@ -154,6 +163,8 @@ export async function POST(request: NextRequest) {
     teacher_config: appSettings?.teacher,
     preferred_topics: appSettings?.user.preferred_topics,
     session_summaries: sessionSummaries,
+    // First message in this session → natural intro, no jumping into teaching
+    is_new_session: recentMessagesResult.length === 0,
   })
 
   // أضف نتائج البحث للـ system prompt إذا وجدت
@@ -161,15 +172,7 @@ export async function POST(request: NextRequest) {
     ? systemPrompt + '\n\n' + searchResults
     : systemPrompt
 
-  // Fetch recent messages for context (last 20)
-  const { data: recentMessages } = await supabase
-    .from('messages')
-    .select('role, content')
-    .eq('session_id', session_id)
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  const contextMessages = (recentMessages ?? []).reverse()
+  const contextMessages = [...recentMessagesResult].reverse()
 
   const messages = [
     { role: 'system' as const, content: finalSystemPrompt },

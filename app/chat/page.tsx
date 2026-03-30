@@ -51,7 +51,8 @@ export default function ChatPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const sessionId = params.get('session_id')
+    // URL param takes priority, then localStorage (preserves session across BottomNav nav)
+    const sessionId = params.get('session_id') ?? localStorage.getItem('tr_ar_session_id') ?? null
     const resolvedLang: Language = 'turkish'
     if (resolvedLang !== language) setLanguage(resolvedLang)
 
@@ -66,14 +67,18 @@ export default function ChatPage() {
           fetch(`/api/vocab?language=${lang}&known=true`),
         ])
         if (sessionRes.ok) {
-          setSession(await sessionRes.json())
-          if (sessionId) {
-            const histRes = await fetch(`/api/history?session_id=${sessionId}`)
-            if (histRes.ok) {
-              const prevMsgs: Array<{ id: string; role: 'user' | 'assistant'; content: string }> = await histRes.json()
-              if (Array.isArray(prevMsgs) && prevMsgs.length > 0) {
-                setMessages(prevMsgs.map(m => ({ id: m.id, role: m.role, content: m.content })))
-              }
+          const loadedSession = await sessionRes.json()
+          setSession(loadedSession)
+          // Persist so BottomNav navigation back to /chat keeps the same session
+          localStorage.setItem('tr_ar_session_id', loadedSession.id)
+          // Update URL to reflect the actual session
+          window.history.replaceState(null, '', `/chat?session_id=${loadedSession.id}`)
+          // Load previous messages for this session
+          const histRes = await fetch(`/api/history?session_id=${loadedSession.id}`)
+          if (histRes.ok) {
+            const prevMsgs: Array<{ id: string; role: 'user' | 'assistant'; content: string }> = await histRes.json()
+            if (Array.isArray(prevMsgs) && prevMsgs.length > 0) {
+              setMessages(prevMsgs.map(m => ({ id: m.id, role: m.role, content: m.content })))
             }
           }
         }
@@ -215,7 +220,8 @@ export default function ChatPage() {
         setSuggestions([])
         setFeedback(null)
         setError(null)
-        // Update URL so navigating away and back preserves this session
+        // Persist new session — keeps context even when navigating via BottomNav
+        localStorage.setItem('tr_ar_session_id', newSession.id)
         window.history.replaceState(null, '', `/chat?session_id=${newSession.id}`)
       }
     } finally {
