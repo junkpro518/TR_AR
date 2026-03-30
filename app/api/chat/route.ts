@@ -235,13 +235,13 @@ export async function POST(request: NextRequest) {
         if (goalMatch) {
           const goalTitle = goalMatch[1].trim()
           cleanResponse = fullResponse.replace(goalMatch[0], '').trim()
-          supabase.from('goals').insert({
+          Promise.resolve(supabase.from('goals').insert({
             language,
             title: goalTitle,
             is_auto: true,
             progress: 0,
             completed: false,
-          }).then(() => {}).catch(() => {})
+          })).catch(() => {})
         }
 
         const suggestPromptMatch = cleanResponse.match(/\[SUGGEST_PROMPT:\s*([\s\S]+?)\]/)
