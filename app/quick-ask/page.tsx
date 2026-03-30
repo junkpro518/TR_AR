@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { MessageBubble } from '@/components/chat/MessageBubble'
 
 interface ChatMessage {
   id: string
@@ -202,41 +203,13 @@ export default function QuickAskPage() {
         )}
 
         {messages.map((msg, idx) => (
-          <div
+          <MessageBubble
             key={msg.id}
-            className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}
-          >
-            <div
-              className="max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed"
-              style={
-                msg.role === 'user'
-                  ? {
-                      background: 'var(--bg-surface)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text-primary)',
-                      borderTopRightRadius: '4px',
-                    }
-                  : {
-                      background: 'rgba(212,175,55,0.12)',
-                      border: '1px solid rgba(212,175,55,0.2)',
-                      color: 'var(--text-primary)',
-                      borderTopLeftRadius: '4px',
-                    }
-              }
-            >
-              {msg.content ? (
-                <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
-              ) : (
-                isLoading && idx === messages.length - 1 && msg.role === 'assistant' ? (
-                  <span style={{ color: 'var(--text-muted)' }}>
-                    <span className="animate-pulse">●</span>
-                    <span className="animate-pulse" style={{ animationDelay: '0.2s' }}>●</span>
-                    <span className="animate-pulse" style={{ animationDelay: '0.4s' }}>●</span>
-                  </span>
-                ) : null
-              )}
-            </div>
-          </div>
+            role={msg.role}
+            content={msg.content}
+            language="turkish"
+            isStreaming={isLoading && idx === messages.length - 1 && msg.role === 'assistant'}
+          />
         ))}
 
         {/* Error */}
