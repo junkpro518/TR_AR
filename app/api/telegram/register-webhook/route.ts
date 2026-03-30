@@ -5,8 +5,8 @@ import { getSecret } from '@/lib/secrets-loader'
 // يسجّل عنوان webhook مع Telegram حتى تصل ردود الأزرار للتطبيق
 export async function POST() {
   const BOT_TOKEN = await getSecret('TELEGRAM_BOT_TOKEN')
-  // Try secrets DB first, then env var
-  const APP_URL = (await getSecret('APP_URL')) || process.env.NEXT_PUBLIC_APP_URL
+  // env var first (Cloudflare Variable), then Supabase settings fallback
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || await getSecret('APP_URL')
 
   if (!BOT_TOKEN) {
     return NextResponse.json({ ok: false, error: 'TELEGRAM_BOT_TOKEN غير مضبوط' }, { status: 400 })

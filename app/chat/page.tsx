@@ -227,7 +227,7 @@ export default function ChatPage() {
   return (
     <div
       className="flex"
-      style={{ background: 'var(--bg-base)', height: 'calc(100dvh - 64px)' }}
+      style={{ background: 'var(--bg-base)', height: 'calc(100dvh - 64px)', overflow: 'hidden' }}
     >
       {/* ─── Main Chat Column ─── */}
       <div className="flex flex-col flex-1 min-w-0">
