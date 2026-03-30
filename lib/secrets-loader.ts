@@ -27,12 +27,12 @@ export async function getSecrets(): Promise<Record<string, string>> {
 }
 
 export async function getSecret(key: string): Promise<string> {
-  // Supabase secrets take priority over env vars (allows updating via setup page)
-  const secrets = await getSecrets()
-  if (secrets[key]) return secrets[key]
+  // 1. process.env first — covers Cloudflare Secrets/Variables and .env on VPS
+  if (process.env[key]) return process.env[key]!
 
-  // Fall back to env var
-  return process.env[key] ?? ''
+  // 2. Supabase settings table — allows /setup page to override for local dev
+  const secrets = await getSecrets()
+  return secrets[key] ?? ''
 }
 
 export function clearSecretsCache() {
