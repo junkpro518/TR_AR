@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
-import { streamChatCompletion } from '@/lib/openrouter'
 import { getSecret } from '@/lib/secrets-loader'
 import type { Language, CEFRLevel, TaskFeedback } from '@/lib/types'
 
@@ -118,17 +117,30 @@ Return JSON:
   }
 
   try {
-    const messages = [{ role: 'user' as const, content: evalPrompt }]
-    let raw = ''
-    const stream = await streamChatCompletion(apiKey, model, messages)
-    const reader = stream.getReader()
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      raw += value
+    // استخدم non-streaming للتقييم — أبسط وأكثر موثوقية على Cloudflare Workers
+    const evalRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL ?? 'https://tr-ar.junkpro518.workers.dev',
+        'X-Title': 'TR-AR Language Teacher',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: evalPrompt }],
+        stream: false,
+        response_format: { type: 'json_object' },
+        temperature: 0.1,
+        max_tokens: 600,
+      }),
+    })
+    if (evalRes.ok) {
+      const evalData = await evalRes.json()
+      const raw = evalData.choices?.[0]?.message?.content ?? ''
+      const match = raw.match(/\{[\s\S]*\}/)
+      if (match) feedbackJson = JSON.parse(match[0])
     }
-    const match = raw.match(/\{[\s\S]*\}/)
-    if (match) feedbackJson = JSON.parse(match[0])
   } catch {
     // fallback scores already set
   }

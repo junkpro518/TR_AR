@@ -227,96 +227,88 @@ export async function POST(request: NextRequest) {
         return
       } finally {
         reader.releaseLock()
+
+        // ── نستخرج markers ونبني cleanResponse ──
+        const goalMatch = fullResponse.match(/\[GOAL:\s*([\s\S]+?)\]/)
+        let cleanResponse = fullResponse
+
+        if (goalMatch) {
+          const goalTitle = goalMatch[1].trim()
+          cleanResponse = fullResponse.replace(goalMatch[0], '').trim()
+          supabase.from('goals').insert({
+            language,
+            title: goalTitle,
+            is_auto: true,
+            progress: 0,
+            completed: false,
+          }).then(() => {}).catch(() => {})
+        }
+
+        const suggestPromptMatch = cleanResponse.match(/\[SUGGEST_PROMPT:\s*([\s\S]+?)\]/)
+        if (suggestPromptMatch) {
+          const suggestion = suggestPromptMatch[1].trim()
+          cleanResponse = cleanResponse.replace(suggestPromptMatch[0], '').trim()
+          fetch(new URL('/api/settings/telegram-proposal', request.url).href, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              key: 'system_prompt_base',
+              proposed_value: suggestion,
+              change_description: `💡 اقتراح من المعلم:\n\n"${suggestion.slice(0, 200)}${suggestion.length > 200 ? '...' : ''}"`,
+            }),
+          }).catch(() => {})
+        }
+
+        const dbResponse = cleanResponse.replace(/\[QUIZ\][\s\S]*?\[\/QUIZ\]/gi, '').trim()
+        const messageToSave = searchQuery ? `[WEB_SEARCH]\n${dbResponse}` : dbResponse
+
+        // ── احفظ رد المعلم في DB ── ضع close() في finally حتى يُغلق الـ stream دائماً
+        let assistantMsgId: string | null = null
         try {
-          // استخرج GOAL marker إذا وجد
-          const goalMatch = fullResponse.match(/\[GOAL:\s*([\s\S]+?)\]/)
-          let cleanResponse = fullResponse
-
-          if (goalMatch) {
-            const goalTitle = goalMatch[1].trim()
-            cleanResponse = fullResponse.replace(goalMatch[0], '').trim()
-
-            // أضف الهدف للقاعدة بشكل مستقل
-            Promise.resolve(
-              supabase.from('goals').insert({
-                language: language,
-                title: goalTitle,
-                is_auto: true,
-                progress: 0,
-                completed: false,
-              })
-            ).catch(() => {}) // fire-and-forget
-          }
-
-          // استخرج SUGGEST_PROMPT marker إذا وجد (اقتراح تعديل على System Prompt)
-          const suggestPromptMatch = cleanResponse.match(/\[SUGGEST_PROMPT:\s*([\s\S]+?)\]/)
-          if (suggestPromptMatch) {
-            const suggestion = suggestPromptMatch[1].trim()
-            cleanResponse = cleanResponse.replace(suggestPromptMatch[0], '').trim()
-            // أرسل الاقتراح إلى Telegram للموافقة (fire-and-forget)
-            Promise.resolve(
-              fetch(new URL('/api/settings/telegram-proposal', request.url).href, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  key: 'system_prompt_base',
-                  proposed_value: suggestion,
-                  change_description: `💡 اقتراح من المعلم لتعديل الـ System Prompt:\n\n"${suggestion.slice(0, 200)}${suggestion.length > 200 ? '...' : ''}"`,
-                }),
-              })
-            ).catch(() => {})
-          }
-
-          // احذف QUIZ blocks من النص المحفوظ (الـ UI يُعيد بناءها)
-          // لكن أبقِها في cleanResponse الذي يُرسَل للـ client
-          // فقط في الرسالة المحفوظة في DB، احذف الـ quiz
-          const dbResponse = cleanResponse.replace(/\[QUIZ\][\s\S]*?\[\/QUIZ\]/gi, '').trim()
-
-          const messageToSave = searchQuery
-            ? `[WEB_SEARCH]\n${dbResponse}`
-            : dbResponse
-
           const { data: savedAssistantMsg } = await supabase
             .from('messages')
             .insert({ session_id, role: 'assistant', content: messageToSave, xp_earned: 0 })
             .select('id')
             .single()
+          assistantMsgId = savedAssistantMsg?.id ?? null
+        } catch { /* silent — DB save failed, stream still closes */ } finally {
+          // ALWAYS close the stream so the client is never left hanging
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ done: true, user_message_id: userMessageId, assistant_message_id: savedAssistantMsg?.id ?? null })}\n\n`
+              `data: ${JSON.stringify({ done: true, user_message_id: userMessageId, assistant_message_id: assistantMsgId })}\n\n`
             )
           )
-          controller.close() // close stream immediately so client knows we're done
-          // Task 1: Fire-and-forget — analyze conversation and auto-add/update goals
-          analyzeAndUpdateGoals(supabase, session_id, message, dbResponse, cefr_level).catch(() => {})
+          controller.close()
+        }
 
-          // Fire-and-forget: summarize previous sessions
-          Promise.resolve((async () => {
-            try {
-              const { data: prevSessions } = await supabase
-                .from('sessions')
-                .select('id')
-                .eq('language', 'turkish')
-                .neq('id', session_id)
-                .order('created_at', { ascending: false })
-                .limit(5)
-              if (!prevSessions || prevSessions.length === 0) return
-              const prevIds = prevSessions.map((s: { id: string }) => s.id)
-              const { data: existing } = await supabase
-                .from('session_summaries')
-                .select('session_id')
-                .in('session_id', prevIds)
-              const summarizedIds = new Set((existing ?? []).map((s: { session_id: string }) => s.session_id))
-              const needsSummary = prevIds.find((id: string) => !summarizedIds.has(id))
-              if (!needsSummary) return
-              const { summarizeSession } = await import('@/lib/session-summarizer')
-              const apiKey = await getSecret('OPENROUTER_API_KEY')
-              const model = await getSecret('ANALYSIS_MODEL') || 'meta-llama/llama-3.1-8b-instruct'
-              if (!apiKey) return
-              await summarizeSession(supabase, needsSummary, apiKey, model)
-            } catch { /* silent */ }
-          })()).catch(() => {})
-        } catch { /* silent — background tasks failed */ }
+        // ── مهام خلفية fire-and-forget ──
+        analyzeAndUpdateGoals(supabase, session_id, message, dbResponse, cefr_level).catch(() => {})
+
+        ;(async () => {
+          try {
+            const { data: prevSessions } = await supabase
+              .from('sessions')
+              .select('id')
+              .eq('language', 'turkish')
+              .neq('id', session_id)
+              .order('created_at', { ascending: false })
+              .limit(5)
+            if (!prevSessions?.length) return
+            const prevIds = prevSessions.map((s: { id: string }) => s.id)
+            const { data: existing } = await supabase
+              .from('session_summaries')
+              .select('session_id')
+              .in('session_id', prevIds)
+            const summarizedIds = new Set((existing ?? []).map((s: { session_id: string }) => s.session_id))
+            const needsSummary = prevIds.find((id: string) => !summarizedIds.has(id))
+            if (!needsSummary) return
+            const { summarizeSession } = await import('@/lib/session-summarizer')
+            const bgKey = await getSecret('OPENROUTER_API_KEY')
+            const bgModel = await getSecret('ANALYSIS_MODEL') || 'meta-llama/llama-3.1-8b-instruct'
+            if (!bgKey) return
+            await summarizeSession(supabase, needsSummary, bgKey, bgModel)
+          } catch { /* silent */ }
+        })().catch(() => {})
       }
     },
   })
