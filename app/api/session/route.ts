@@ -52,9 +52,10 @@ export async function GET(request: NextRequest) {
 
       if (lastActivity === yesterdayStr) {
         streakDays += 1
-      } else {
+      } else if (lastActivity) {
         streakDays = 1 // Reset streak — gap > 1 day
       }
+      // lastActivity === null → keep current streak value
 
       const { error: updateError } = await supabase
         .from('sessions')
@@ -95,14 +96,37 @@ export async function POST(request: NextRequest) {
   const language = (body.language ?? 'turkish') as Language
 
   const supabase = createServerClient()
+
+  // Inherit streak from the most recent session
+  const today = new Date().toISOString().split('T')[0]
+  const { data: lastSession } = await supabase
+    .from('sessions')
+    .select('streak_days, last_activity_date')
+    .eq('language', language)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  let inheritedStreak = 1
+  if (lastSession?.last_activity_date) {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString().split('T')[0]
+    if (lastSession.last_activity_date === today) {
+      inheritedStreak = lastSession.streak_days
+    } else if (lastSession.last_activity_date === yesterdayStr) {
+      inheritedStreak = lastSession.streak_days + 1
+    }
+  }
+
   const { data: newSession, error } = await supabase
     .from('sessions')
     .insert({
       language,
       cefr_level: 'A1' as CEFRLevel,
       total_xp: 0,
-      streak_days: 1,
-      last_activity_date: new Date().toISOString().split('T')[0],
+      streak_days: inheritedStreak,
+      last_activity_date: today,
     })
     .select()
     .single()

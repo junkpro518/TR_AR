@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
     supabase
       .from('achievements')
       .select('*')
+      .eq('language', language)
       .order('earned_at', { ascending: false }),
 
     supabase

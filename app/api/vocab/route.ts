@@ -37,7 +37,7 @@ export async function PATCH(request: NextRequest) {
     next_review_at: string
   }
 
-  if (!id || ease_factor == null || interval == null || repetitions == null || !next_review_at) {
+  if (!id || typeof ease_factor !== 'number' || typeof interval !== 'number' || typeof repetitions !== 'number' || !next_review_at) {
     return NextResponse.json({ error: 'id, ease_factor, interval, repetitions, next_review_at required' }, { status: 400 })
   }
 

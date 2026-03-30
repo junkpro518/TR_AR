@@ -80,9 +80,10 @@ export async function getWeaknessReport(): Promise<WeaknessReport> {
     .select('type')
     .limit(200)
 
-  const totalItems = allFeedback?.length ?? 0
-  const correctItems = allFeedback?.filter(f => f.type === 'correct').length ?? 0
-  const overallAccuracy = totalItems > 0 ? Math.round((correctItems / totalItems) * 100) : 0
+  // Calculate accuracy only from evaluable items (correct/correction), ignoring suggestions and new_vocab
+  const evaluableItems = allFeedback?.filter(f => f.type === 'correct' || f.type === 'correction') ?? []
+  const correctItems = evaluableItems.filter(f => f.type === 'correct').length
+  const overallAccuracy = evaluableItems.length > 0 ? Math.round((correctItems / evaluableItems.length) * 100) : 0
 
   const recommendations: string[] = []
   if (topWeaknesses.length > 0) {
