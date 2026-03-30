@@ -208,112 +208,111 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Collect full response to save to DB while streaming to client
+  // Use TransformStream + background writer — the CF Workers-compatible streaming pattern.
+  // A start-based ReadableStream with nested reader.read() loops can stall in CF Workers.
   let fullResponse = ''
   const encoder = new TextEncoder()
+  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>()
+  const writer = writable.getWriter()
 
-  const clientStream = new ReadableStream({
-    async start(controller) {
-      const reader = stream.getReader()
-      try {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          fullResponse += value
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: value })}\n\n`))
-        }
-      } catch (err) {
-        controller.error(err)
-        return
-      } finally {
-        reader.releaseLock()
-
-        // ── نستخرج markers ونبني cleanResponse ──
-        const goalMatch = fullResponse.match(/\[GOAL:\s*([\s\S]+?)\]/)
-        let cleanResponse = fullResponse
-
-        if (goalMatch) {
-          const goalTitle = goalMatch[1].trim()
-          cleanResponse = fullResponse.replace(goalMatch[0], '').trim()
-          Promise.resolve(supabase.from('goals').insert({
-            language,
-            title: goalTitle,
-            is_auto: true,
-            progress: 0,
-            completed: false,
-          })).catch(() => {})
-        }
-
-        const suggestPromptMatch = cleanResponse.match(/\[SUGGEST_PROMPT:\s*([\s\S]+?)\]/)
-        if (suggestPromptMatch) {
-          const suggestion = suggestPromptMatch[1].trim()
-          cleanResponse = cleanResponse.replace(suggestPromptMatch[0], '').trim()
-          fetch(new URL('/api/settings/telegram-proposal', request.url).href, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              key: 'system_prompt_base',
-              proposed_value: suggestion,
-              change_description: `💡 اقتراح من المعلم:\n\n"${suggestion.slice(0, 200)}${suggestion.length > 200 ? '...' : ''}"`,
-            }),
-          }).catch(() => {})
-        }
-
-        const dbResponse = cleanResponse.replace(/\[QUIZ\][\s\S]*?\[\/QUIZ\]/gi, '').trim()
-        const messageToSave = searchQuery ? `[WEB_SEARCH]\n${dbResponse}` : dbResponse
-
-        // ── احفظ رد المعلم في DB ── ضع close() في finally حتى يُغلق الـ stream دائماً
-        let assistantMsgId: string | null = null
-        try {
-          const { data: savedAssistantMsg } = await supabase
-            .from('messages')
-            .insert({ session_id, role: 'assistant', content: messageToSave, xp_earned: 0 })
-            .select('id')
-            .single()
-          assistantMsgId = savedAssistantMsg?.id ?? null
-        } catch { /* silent — DB save failed, stream still closes */ } finally {
-          // ALWAYS close the stream so the client is never left hanging
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ done: true, user_message_id: userMessageId, assistant_message_id: assistantMsgId })}\n\n`
-            )
-          )
-          controller.close()
-        }
-
-        // ── مهام خلفية fire-and-forget ──
-        analyzeAndUpdateGoals(supabase, session_id, message, dbResponse, cefr_level).catch(() => {})
-
-        ;(async () => {
-          try {
-            const { data: prevSessions } = await supabase
-              .from('sessions')
-              .select('id')
-              .eq('language', 'turkish')
-              .neq('id', session_id)
-              .order('created_at', { ascending: false })
-              .limit(5)
-            if (!prevSessions?.length) return
-            const prevIds = prevSessions.map((s: { id: string }) => s.id)
-            const { data: existing } = await supabase
-              .from('session_summaries')
-              .select('session_id')
-              .in('session_id', prevIds)
-            const summarizedIds = new Set((existing ?? []).map((s: { session_id: string }) => s.session_id))
-            const needsSummary = prevIds.find((id: string) => !summarizedIds.has(id))
-            if (!needsSummary) return
-            const { summarizeSession } = await import('@/lib/session-summarizer')
-            const bgKey = await getSecret('OPENROUTER_API_KEY')
-            const bgModel = await getSecret('ANALYSIS_MODEL') || 'meta-llama/llama-3.1-8b-instruct'
-            if (!bgKey) return
-            await summarizeSession(supabase, needsSummary, bgKey, bgModel)
-          } catch { /* silent */ }
-        })().catch(() => {})
+  // Background task: reads AI stream, forwards to client, then saves to DB
+  ;(async () => {
+    const reader = stream.getReader()
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        fullResponse += value
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ text: value })}\n\n`))
       }
-    },
-  })
+    } catch { /* stream error — fall through to finally */ } finally {
+      reader.releaseLock()
 
-  return new Response(clientStream, {
+      // ── نستخرج markers ونبني cleanResponse ──
+      const goalMatch = fullResponse.match(/\[GOAL:\s*([\s\S]+?)\]/)
+      let cleanResponse = fullResponse
+
+      if (goalMatch) {
+        const goalTitle = goalMatch[1].trim()
+        cleanResponse = fullResponse.replace(goalMatch[0], '').trim()
+        Promise.resolve(supabase.from('goals').insert({
+          language,
+          title: goalTitle,
+          is_auto: true,
+          progress: 0,
+          completed: false,
+        })).catch(() => {})
+      }
+
+      const suggestPromptMatch = cleanResponse.match(/\[SUGGEST_PROMPT:\s*([\s\S]+?)\]/)
+      if (suggestPromptMatch) {
+        const suggestion = suggestPromptMatch[1].trim()
+        cleanResponse = cleanResponse.replace(suggestPromptMatch[0], '').trim()
+        fetch(new URL('/api/settings/telegram-proposal', request.url).href, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            key: 'system_prompt_base',
+            proposed_value: suggestion,
+            change_description: `💡 اقتراح من المعلم:\n\n"${suggestion.slice(0, 200)}${suggestion.length > 200 ? '...' : ''}"`,
+          }),
+        }).catch(() => {})
+      }
+
+      const dbResponse = cleanResponse.replace(/\[QUIZ\][\s\S]*?\[\/QUIZ\]/gi, '').trim()
+      const messageToSave = searchQuery ? `[WEB_SEARCH]\n${dbResponse}` : dbResponse
+
+      // ── احفظ رد المعلم في DB ── أغلق writer دائماً في finally
+      let assistantMsgId: string | null = null
+      try {
+        const { data: savedAssistantMsg } = await supabase
+          .from('messages')
+          .insert({ session_id, role: 'assistant', content: messageToSave, xp_earned: 0 })
+          .select('id')
+          .single()
+        assistantMsgId = savedAssistantMsg?.id ?? null
+      } catch { /* silent — DB save failed */ } finally {
+        // ALWAYS send done event and close — client must never be left hanging
+        await writer.write(
+          encoder.encode(
+            `data: ${JSON.stringify({ done: true, user_message_id: userMessageId, assistant_message_id: assistantMsgId })}\n\n`
+          )
+        ).catch(() => {})
+        await writer.close().catch(() => {})
+      }
+
+      // ── مهام خلفية fire-and-forget ──
+      analyzeAndUpdateGoals(supabase, session_id, message, dbResponse, cefr_level).catch(() => {})
+
+      ;(async () => {
+        try {
+          const { data: prevSessions } = await supabase
+            .from('sessions')
+            .select('id')
+            .eq('language', 'turkish')
+            .neq('id', session_id)
+            .order('created_at', { ascending: false })
+            .limit(5)
+          if (!prevSessions?.length) return
+          const prevIds = prevSessions.map((s: { id: string }) => s.id)
+          const { data: existing } = await supabase
+            .from('session_summaries')
+            .select('session_id')
+            .in('session_id', prevIds)
+          const summarizedIds = new Set((existing ?? []).map((s: { session_id: string }) => s.session_id))
+          const needsSummary = prevIds.find((id: string) => !summarizedIds.has(id))
+          if (!needsSummary) return
+          const { summarizeSession } = await import('@/lib/session-summarizer')
+          const bgKey = await getSecret('OPENROUTER_API_KEY')
+          const bgModel = await getSecret('ANALYSIS_MODEL') || 'meta-llama/llama-3.1-8b-instruct'
+          if (!bgKey) return
+          await summarizeSession(supabase, needsSummary, bgKey, bgModel)
+        } catch { /* silent */ }
+      })().catch(() => {})
+    }
+  })().catch(() => writer.close().catch(() => {}))
+
+  return new Response(readable, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',

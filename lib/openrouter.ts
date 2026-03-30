@@ -66,36 +66,44 @@ export async function streamChatCompletion(
 
   if (!response.body) throw new Error('No response body')
 
-  const reader = response.body.getReader()
   const decoder = new TextDecoder()
+  let buffer = ''
 
-  return new ReadableStream<string>({
-    async pull(controller) {
-      const { done, value } = await reader.read()
-      if (done) {
-        controller.close()
-        return
-      }
-
-      const chunk = decoder.decode(value)
-      const lines = chunk.split('\n').filter(line => line.startsWith('data: '))
-
+  // Use TransformStream + pipeTo — the CF Workers-compatible streaming pattern.
+  // A pull-based ReadableStream stalls in CF Workers when pull enqueues nothing.
+  const { readable, writable } = new TransformStream<Uint8Array, string>({
+    transform(chunk, controller) {
+      buffer += decoder.decode(chunk, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
       for (const line of lines) {
-        const data = line.slice(6)
-        if (data === '[DONE]') {
-          controller.close()
-          return
-        }
+        if (!line.startsWith('data: ')) continue
+        const data = line.slice(6).trim()
+        if (data === '[DONE]') return
         try {
           const parsed = JSON.parse(data)
           const content = parsed.choices?.[0]?.delta?.content
           if (content) controller.enqueue(content)
-        } catch {
-          // skip malformed chunks
+        } catch { /* skip malformed */ }
+      }
+    },
+    flush(controller) {
+      // Handle any remaining data in buffer on stream end
+      if (buffer.startsWith('data: ')) {
+        const data = buffer.slice(6).trim()
+        if (data && data !== '[DONE]') {
+          try {
+            const parsed = JSON.parse(data)
+            const content = parsed.choices?.[0]?.delta?.content
+            if (content) controller.enqueue(content)
+          } catch { /* skip */ }
         }
       }
     },
   })
+
+  response.body.pipeTo(writable).catch(() => {})
+  return readable
 }
 
 export async function analyzeFeedback(

@@ -72,27 +72,19 @@ export async function POST(request: NextRequest) {
 
   const encoder = new TextEncoder()
 
-  const clientStream = new ReadableStream({
-    async start(controller) {
-      const reader = stream.getReader()
-      try {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: value })}\n\n`))
-        }
-      } catch (err) {
-        controller.error(err)
-        return
-      } finally {
-        reader.releaseLock()
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`))
-        controller.close()
-      }
+  // Use TransformStream + pipeTo — CF Workers-compatible streaming pattern
+  const { readable, writable } = new TransformStream<string, Uint8Array>({
+    transform(value, controller) {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: value })}\n\n`))
+    },
+    flush(controller) {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`))
     },
   })
 
-  return new Response(clientStream, {
+  stream.pipeTo(writable).catch(() => {})
+
+  return new Response(readable, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
