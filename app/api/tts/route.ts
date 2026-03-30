@@ -6,11 +6,6 @@ export async function POST(request: NextRequest) {
     const { text, language = 'tr' } = await request.json()
     if (!text) return NextResponse.json({ error: 'text required' }, { status: 400 })
 
-    // Only use Voxtral if API key is configured
-    if (!process.env.MISTRAL_API_KEY) {
-      return NextResponse.json({ fallback: true }, { status: 503 })
-    }
-
     const audioBuffer = await generateVoxtralAudio(text, language as 'tr' | 'ar')
 
     if (!audioBuffer) {

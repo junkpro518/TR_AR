@@ -215,6 +215,8 @@ export default function ChatPage() {
         setSuggestions([])
         setFeedback(null)
         setError(null)
+        // Update URL so navigating away and back preserves this session
+        window.history.replaceState(null, '', `/chat?session_id=${newSession.id}`)
       }
     } finally {
       setStartingNew(false)

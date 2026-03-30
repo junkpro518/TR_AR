@@ -97,11 +97,11 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServerClient()
 
-  // Inherit streak from the most recent session
+  // Inherit streak and CEFR level from the most recent session
   const today = new Date().toISOString().split('T')[0]
   const { data: lastSession } = await supabase
     .from('sessions')
-    .select('streak_days, last_activity_date')
+    .select('streak_days, last_activity_date, cefr_level, total_xp')
     .eq('language', language)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -119,12 +119,15 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const inheritedCefr = (lastSession?.cefr_level ?? 'A1') as CEFRLevel
+  const inheritedXp = lastSession?.total_xp ?? 0
+
   const { data: newSession, error } = await supabase
     .from('sessions')
     .insert({
       language,
-      cefr_level: 'A1' as CEFRLevel,
-      total_xp: 0,
+      cefr_level: inheritedCefr,
+      total_xp: inheritedXp,
       streak_days: inheritedStreak,
       last_activity_date: today,
     })
