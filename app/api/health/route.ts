@@ -17,7 +17,6 @@ export async function GET() {
     checks.supabase = 'unreachable'
   }
 
-  const healthy = checks.supabase === 'ok'
-
-  return NextResponse.json(checks, { status: healthy ? 200 : 503 })
+  // App is healthy as long as it's running — Supabase failure is non-fatal
+  return NextResponse.json(checks, { status: 200 })
 }

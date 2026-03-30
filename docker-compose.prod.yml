@@ -36,16 +36,24 @@ services:
       start_period: 40s
     labels:
       - "traefik.enable=true"
-      # Router
+      # Tell Traefik which network to use
+      - "traefik.docker.network=proxy"
+      # HTTPS router
       - "traefik.http.routers.tr-ar.rule=Host(`tr-ar.junkpro.duckdns.org`)"
       - "traefik.http.routers.tr-ar.entrypoints=websecure"
       - "traefik.http.routers.tr-ar.tls.certresolver=myresolver"
-      # Service
+      # HTTP → HTTPS redirect router
+      - "traefik.http.routers.tr-ar-http.rule=Host(`tr-ar.junkpro.duckdns.org`)"
+      - "traefik.http.routers.tr-ar-http.entrypoints=web"
+      - "traefik.http.routers.tr-ar-http.middlewares=redirect-https"
+      - "traefik.http.middlewares.redirect-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-https.redirectscheme.permanent=true"
+      # Service port
       - "traefik.http.services.tr-ar.loadbalancer.server.port=3000"
       # Streaming / SSE support — disable buffering
       - "traefik.http.middlewares.tr-ar-headers.headers.customresponseheaders.X-Accel-Buffering=no"
       - "traefik.http.routers.tr-ar.middlewares=tr-ar-headers"
 
 networks:
-  traefik-net:
+  proxy:
     external: true
