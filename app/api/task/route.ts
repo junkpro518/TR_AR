@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!effectiveSessionId) {
-    return NextResponse.json({ error: 'task_id and user_text required' }, { status: 400 })
+    return NextResponse.json({ error: 'Failed to resolve session_id' }, { status: 500 })
   }
 
   const { data: task, error: taskError } = await supabase

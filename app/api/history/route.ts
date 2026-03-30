@@ -6,7 +6,8 @@ import type { Language } from '@/lib/types'
 export async function GET(request: NextRequest) {
   const language = request.nextUrl.searchParams.get('language') as Language
   const session_id = request.nextUrl.searchParams.get('session_id')
-  const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') ?? '50'), 100)
+  const rawLimit = parseInt(request.nextUrl.searchParams.get('limit') ?? '50', 10)
+  const limit = Math.min(isNaN(rawLimit) || rawLimit < 1 ? 50 : rawLimit, 100)
 
   if (!language && !session_id) {
     return NextResponse.json({ error: 'language or session_id required' }, { status: 400 })

@@ -22,13 +22,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'No vocabulary cards found' }, { status: 404 })
   }
 
+  function escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/\t/g, ' ')
+      .replace(/\n/g, ' ')
+  }
+
   // Anki tab-separated format: front\tback\ttags
   // front = word, back = translation + example
   const lines = cards.map(card => {
-    const front = card.word
+    const front = escapeHtml(card.word)
     const back = card.example
-      ? `${card.translation}<br><br><i>${card.example}</i>`
-      : card.translation
+      ? `${escapeHtml(card.translation)}<br><br><i>${escapeHtml(card.example)}</i>`
+      : escapeHtml(card.translation)
     return `${front}\t${back}\t${language}`
   })
 

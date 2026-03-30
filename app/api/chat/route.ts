@@ -310,8 +310,9 @@ export async function POST(request: NextRequest) {
               const needsSummary = prevIds.find((id: string) => !summarizedIds.has(id))
               if (!needsSummary) return
               const { summarizeSession } = await import('@/lib/session-summarizer')
-              const apiKey = process.env.OPENROUTER_API_KEY ?? ''
-              const model = process.env.ANALYSIS_MODEL ?? 'meta-llama/llama-3.1-8b-instruct'
+              const apiKey = await getSecret('OPENROUTER_API_KEY')
+              const model = await getSecret('ANALYSIS_MODEL') || 'meta-llama/llama-3.1-8b-instruct'
+              if (!apiKey) return
               await summarizeSession(supabase, needsSummary, apiKey, model)
             } catch { /* silent */ }
           })()).catch(() => {})

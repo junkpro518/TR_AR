@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { analyzeFeedback } from '@/lib/openrouter'
+import { getSecret } from '@/lib/secrets-loader'
 import type { Language } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
@@ -15,8 +16,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'message, language, message_id required' }, { status: 400 })
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY!
-  const model = process.env.ANALYSIS_MODEL!
+  const apiKey = await getSecret('OPENROUTER_API_KEY')
+  const model = await getSecret('ANALYSIS_MODEL')
+  if (!apiKey || !model) {
+    return NextResponse.json({ items: [], new_vocab: [], xp_earned: 2 })
+  }
 
   // Analyze with lightweight model — never crash the chat if this fails
   let feedback
