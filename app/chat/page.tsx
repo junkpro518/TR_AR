@@ -227,7 +227,15 @@ export default function ChatPage() {
   return (
     <div
       className="flex"
-      style={{ background: 'var(--bg-base)', height: 'calc(100dvh - 64px)', overflow: 'hidden' }}
+      style={{
+        background: 'var(--bg-base)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 64,
+        overflow: 'hidden',
+      }}
     >
       {/* ─── Main Chat Column ─── */}
       <div className="flex flex-col flex-1 min-w-0">
