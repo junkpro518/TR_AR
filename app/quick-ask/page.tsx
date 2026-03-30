@@ -105,7 +105,7 @@ export default function QuickAskPage() {
     <div
       dir="rtl"
       className="flex flex-col"
-      style={{ background: 'var(--bg-base)', color: 'var(--text-primary)', height: '100dvh' }}
+      style={{ background: 'var(--bg-base)', color: 'var(--text-primary)', position: 'fixed', inset: 0 }}
     >
       {/* Header */}
       <header
