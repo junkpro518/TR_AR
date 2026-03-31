@@ -1,38 +1,42 @@
 # Hermes TR_AR Configuration
-provider: openrouter
-model: ${CHAT_MODEL:-google/gemini-2.0-flash-001}
-base_url: https://openrouter.ai/api/v1
-api_key: ${OPENROUTER_API_KEY}
+# يُنسخ هذا الملف إلى $HERMES_HOME/config.yaml عند تشغيل الحاوية.
+# للتخصيص: استخدم متغيرات البيئة أو عدّل هذا الملف مباشرة.
 
-# خادم الـ API
-server:
-  host: 0.0.0.0
-  port: 8000
+# =============================================================================
+# Model Configuration
+# =============================================================================
+model:
+  # النموذج الافتراضي — يمكن تجاوزه بـ --model أو HERMES_MODEL
+  default: "google/gemini-2.0-flash-001"
 
-# الذاكرة
-memory:
-  memory_file: /hermes/MEMORY.md
-  user_file: /hermes/USER.md
-  max_memory_chars: 2200
-  max_user_chars: 1375
+  # مزود الاستدلال — openrouter لـ TR_AR
+  provider: "openrouter"
 
-# المهارات
-skills:
-  skills_dir: /hermes/skills
-  auto_load: true
+  # api_key يُقرأ من OPENROUTER_API_KEY في البيئة
+  base_url: "https://openrouter.ai/api/v1"
 
-# السياق
-context:
-  max_iterations: 90
-  compression_threshold: 0.5
+# =============================================================================
+# Terminal Tool Configuration
+# =============================================================================
+terminal:
+  backend: "local"
+  cwd: "."
+  timeout: 180
+  lifetime_seconds: 300
+  docker_mount_cwd_to_workspace: false
 
-# الأمان
-security:
-  scan_context_files: true
-  prompt_injection_check: true
-
-# Streaming
-streaming:
+# =============================================================================
+# Context Compression
+# =============================================================================
+compression:
   enabled: true
-  stale_timeout: 90
-  read_timeout: 60
+  threshold: 0.50
+  target_ratio: 0.20
+  protect_last_n: 20
+  summary_model: "google/gemini-2.0-flash-001"
+
+# =============================================================================
+# Browser Tool
+# =============================================================================
+browser:
+  inactivity_timeout: 120
