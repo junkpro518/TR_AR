@@ -50,3 +50,6 @@ next-env.d.ts
 # cloudflare / opennextjs
 .open-next/
 .wrangler/
+
+# git worktrees
+.worktrees/
