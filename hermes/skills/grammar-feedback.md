@@ -1,7 +1,6 @@
 ---
 name: grammar-feedback
-description: تحليل الأخطاء النحوية التركية وتصنيفها
-platforms: [api]
+description: تحليل الأخطاء النحوية التركية وتصنيفها — مُضمَّن في مهارة المعلم الرئيسية
 conditions: always
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: turkish-teacher
 description: مهارة تدريس اللغة التركية للناطقين بالعربية — تُفعَّل تلقائياً في كل محادثة
-platforms: [api, cli]
 conditions: always
 ---
 

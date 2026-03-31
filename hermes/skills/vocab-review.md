@@ -1,8 +1,7 @@
 ---
 name: vocab-review
-description: مراجعة المفردات باستخدام نظام التكرار المتباعد SRS
-platforms: [api, cli]
-conditions: when_reviewing_vocab
+description: مراجعة المفردات باستخدام نظام التكرار المتباعد SRS — تُفعَّل عند طلب المراجعة
+conditions: on_demand
 ---
 
 # مهارة مراجعة المفردات (SRS)
