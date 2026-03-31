@@ -19,12 +19,12 @@ echo "🔄 جلب آخر تحديثات..."
 git pull origin main
 ok "git pull"
 
-echo "🔨 بناء الصورة (قد يستغرق 2-3 دقائق)..."
-docker compose -f docker-compose.prod.yml build --no-cache
+echo "🔨 بناء الصور (tr-ar + hermes)..."
+docker compose -f docker-compose.prod.yml build
 ok "build"
 
 echo "🚀 إعادة التشغيل..."
-docker compose -f docker-compose.prod.yml up -d --force-recreate
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
 ok "deployed"
 
 echo "⏳ انتظار صحة الحاوية..."
