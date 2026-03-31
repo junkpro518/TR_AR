@@ -20,6 +20,8 @@ services:
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - NEXT_PUBLIC_APP_URL=https://tr-ar.junkpro.duckdns.org
+      # HERMES_API_URL: uncomment and set when a Hermes HTTP gateway is deployed
+      # - HERMES_API_URL=http://hermes:8000
 
     networks:
       - proxy

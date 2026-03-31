@@ -8,6 +8,7 @@ import { loadAppSettings } from '@/lib/settings-loader'
 import { getSecret } from '@/lib/secrets-loader'
 import type { ChatRequest } from '@/lib/types'
 import type { SessionSummary } from '@/lib/session-summarizer'
+import { streamHermesCompletion, checkHermesHealth } from '@/lib/hermes-client'
 
 async function runWebSearchIfNeeded(
   message: string,
@@ -200,15 +201,25 @@ export async function POST(request: NextRequest) {
   }
   const userMessageId = savedUserMsg.id
 
-  // Stream response from OpenRouter
+  // Stream response — يحاول Hermes أولاً، fallback لـ OpenRouter
   let stream: ReadableStream<string>
+  const hermesUrl = process.env.HERMES_API_URL
   try {
-    stream = await streamChatCompletion(apiKey, model, messages)
-  } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'AI service unavailable. Please try again.' }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
-    )
+    if (hermesUrl && await checkHermesHealth()) {
+      stream = await streamHermesCompletion(messages, model)
+    } else {
+      stream = await streamChatCompletion(apiKey, model, messages)
+    }
+  } catch {
+    // إذا فشل Hermes، جرب OpenRouter مباشرةً
+    try {
+      stream = await streamChatCompletion(apiKey, model, messages)
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'AI service unavailable. Please try again.' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
   }
 
   // Use TransformStream + background writer — the CF Workers-compatible streaming pattern.
