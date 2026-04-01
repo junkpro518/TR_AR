@@ -110,8 +110,8 @@ async def health() -> dict:
     return {"status": "ok", "service": "hermes-gateway"}
 
 
-@app.post("/v1/chat/completions")
-async def chat_completions(request: Request) -> StreamingResponse | JSONResponse:
+@app.post("/v1/chat/completions", response_model=None)
+async def chat_completions(request: Request):
     body = await request.json()
     messages: list[dict] = body.get("messages", [])
 
