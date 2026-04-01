@@ -137,15 +137,17 @@ async def chat_completions(request: Request):
         "--query", user_msg,
         "--max_turns", str(MAX_TURNS),
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.PIPE,
         cwd=HERMES_DIR,
         env=env,
     )
 
     assert proc.stdout is not None
+    assert proc.stderr is not None
     try:
-        raw_output = await asyncio.wait_for(
-            proc.stdout.read(), timeout=SUBPROCESS_TIMEOUT
+        raw_output, raw_stderr = await asyncio.wait_for(
+            asyncio.gather(proc.stdout.read(), proc.stderr.read()),
+            timeout=SUBPROCESS_TIMEOUT,
         )
         await proc.wait()
     except asyncio.TimeoutError:
@@ -163,6 +165,10 @@ async def chat_completions(request: Request):
     text = _extract_final_response(lines)
 
     if not text:
+        stderr_text = raw_stderr.decode(errors="replace")[:500]
+        stdout_text = raw_output.decode(errors="replace")[:500]
+        print(f"[hermes 502] stderr: {stderr_text!r}")
+        print(f"[hermes 502] stdout: {stdout_text!r}")
         return JSONResponse(
             {"error": "Hermes returned no FINAL RESPONSE — check OPENROUTER_API_KEY and container logs"},
             status_code=502,
