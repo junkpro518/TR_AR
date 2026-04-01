@@ -1,10 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 
 // POST /api/admin/clear-data
 // يُفرغ محتوى جداول التعلم (DELETE الصفوف فقط — الجداول تبقى كما هي)
 // ⚠️ لا يمسّ: settings, app_secrets (المفاتيح والإعدادات تبقى محفوظة)
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const secret = request.headers.get('x-admin-secret')
+  if (!secret || secret !== (process.env.CRON_SECRET ?? 'tr_ar_cron_2024')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const supabase = createServerClient()
 
   // الجداول المراد تفريغها — بالترتيب الصحيح (الأبناء قبل الآباء)

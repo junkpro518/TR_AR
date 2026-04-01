@@ -61,21 +61,21 @@ export async function POST(request: NextRequest) {
       )
   }
 
-  // Update session XP
+  // Update session XP — atomic increment avoids read-modify-write race condition
   if (feedback.xp_earned > 0) {
     const { data: currentSession } = await supabase
       .from('sessions')
-      .select('id, total_xp')
+      .select('id')
       .eq('language', language)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
     if (currentSession) {
-      await supabase
-        .from('sessions')
-        .update({ total_xp: currentSession.total_xp + feedback.xp_earned })
-        .eq('id', currentSession.id)
+      await supabase.rpc('increment_session_xp', {
+        session_id: currentSession.id,
+        amount: feedback.xp_earned,
+      })
     }
   }
 

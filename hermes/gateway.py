@@ -27,6 +27,7 @@ HERMES_DIR = "/hermes"
 MAX_TURNS = int(os.environ.get("HERMES_MAX_TURNS", "8"))
 STREAM_CHUNK = int(os.environ.get("HERMES_STREAM_CHUNK", "25"))
 STREAM_DELAY = float(os.environ.get("HERMES_STREAM_DELAY", "0.012"))
+SUBPROCESS_TIMEOUT = int(os.environ.get("HERMES_SUBPROCESS_TIMEOUT", "120"))
 
 
 def _update_user_context(messages: list[dict]) -> None:
@@ -48,6 +49,41 @@ def _update_user_context(messages: list[dict]) -> None:
             f.write("\n")
     except OSError:
         pass  # غير حرج — Hermes سيعمل بذاكرته القديمة
+
+
+def _build_query_with_history(messages: list[dict]) -> str:
+    """
+    يبني query يتضمن تاريخ المحادثة الأخير + الرسالة الحالية.
+    hermes-agent يقبل --query فقط، فنُضمّن السياق في النص مباشرة.
+    """
+    max_turns = int(os.environ.get("HERMES_HISTORY_TURNS", "6"))
+
+    # رسائل user/assistant فقط (system تذهب لـ USER.md)
+    conversation = [m for m in messages if m["role"] in ("user", "assistant")]
+
+    if not conversation:
+        return ""
+
+    current_msg = conversation[-1]["content"]
+
+    # ما قبل الرسالة الحالية
+    history = conversation[-(max_turns + 1):-1]
+
+    if not history:
+        return current_msg
+
+    lines = []
+    for msg in history:
+        label = "الطالب" if msg["role"] == "user" else "المعلم"
+        # حد لكل رسالة لتجنب تضخم الـ query
+        content = msg["content"][:400].strip()
+        lines.append(f"{label}: {content}")
+
+    history_text = "\n".join(lines)
+    return (
+        f"[تاريخ المحادثة الأخيرة]\n{history_text}\n\n"
+        f"[رسالة الطالب الحالية]\n{current_msg}"
+    )
 
 
 def _extract_final_response(lines: list[str]) -> str:
@@ -79,44 +115,60 @@ async def chat_completions(request: Request) -> StreamingResponse | JSONResponse
     body = await request.json()
     messages: list[dict] = body.get("messages", [])
 
-    user_msg = next(
-        (m["content"] for m in reversed(messages) if m["role"] == "user"), ""
-    )
+    user_msg = _build_query_with_history(messages)
     if not user_msg:
         return JSONResponse({"error": "No user message"}, status_code=400)
 
     # حدّث ذاكرة Hermes بسياق TR_AR الحالي
     _update_user_context(messages)
 
-    async def sse_stream():
-        env = {
-            **os.environ,
-            "HERMES_HOME": HERMES_HOME,
-            "PYTHONUNBUFFERED": "1",
-        }
+    # شغّل subprocess قبل بدء الـ StreamingResponse حتى نتمكن من إعادة
+    # رموز HTTP صحيحة (504/502) عند الفشل — يلتقطها hermes-client.ts ويُطلق exception
+    # للـ fallback لـ OpenRouter في app/api/chat/route.ts.
+    env = {
+        **os.environ,
+        "HERMES_HOME": HERMES_HOME,
+        "PYTHONUNBUFFERED": "1",
+    }
 
-        proc = await asyncio.create_subprocess_exec(
-            sys.executable,
-            "run_agent.py",
-            "--query", user_msg,
-            "--max_turns", str(MAX_TURNS),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
-            cwd=HERMES_DIR,
-            env=env,
+    proc = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "run_agent.py",
+        "--query", user_msg,
+        "--max_turns", str(MAX_TURNS),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+        cwd=HERMES_DIR,
+        env=env,
+    )
+
+    assert proc.stdout is not None
+    try:
+        raw_output = await asyncio.wait_for(
+            proc.stdout.read(), timeout=SUBPROCESS_TIMEOUT
+        )
+        await proc.wait()
+    except asyncio.TimeoutError:
+        try:
+            proc.kill()
+            await proc.wait()
+        except ProcessLookupError:
+            pass
+        return JSONResponse(
+            {"error": f"Hermes subprocess timed out after {SUBPROCESS_TIMEOUT}s"},
+            status_code=504,
         )
 
-        # اجمع stdout كاملاً ثم استخلص الرد
-        assert proc.stdout is not None
-        raw_output = await proc.stdout.read()
-        await proc.wait()
+    lines = raw_output.decode(errors="replace").splitlines(keepends=True)
+    text = _extract_final_response(lines)
 
-        lines = raw_output.decode(errors="replace").splitlines(keepends=True)
-        text = _extract_final_response(lines)
+    if not text:
+        return JSONResponse(
+            {"error": "Hermes returned no FINAL RESPONSE — check OPENROUTER_API_KEY and container logs"},
+            status_code=502,
+        )
 
-        if not text:
-            text = "[لم يتمكن Hermes من الرد — تحقق من OPENROUTER_API_KEY وسجلات الحاوية]"
-
+    async def sse_stream():
         # بث النص على شكل SSE chunks (streaming feel للواجهة)
         for i in range(0, len(text), STREAM_CHUNK):
             chunk = text[i : i + STREAM_CHUNK]

@@ -147,31 +147,19 @@ Return JSON:
 
   const xp_earned = Math.round((feedbackJson.overall_score / 100) * task.xp_reward)
 
-  const { error: insertError } = await supabase.from('task_attempts').insert({
-    task_id,
-    session_id: effectiveSessionId,
-    score: feedbackJson.overall_score,
-    feedback_json: feedbackJson,
-    completed: feedbackJson.overall_score >= 60,
-    xp_earned,
+  // complete_task_attempt: حفظ النتيجة + تحديث XP في transaction واحد
+  // يمنع الحالة التي يُحفظ فيها task_attempt دون تحديث XP عند الفشل الجزئي
+  const { error: rpcError } = await supabase.rpc('complete_task_attempt', {
+    p_task_id: task_id,
+    p_session_id: effectiveSessionId,
+    p_user_text: user_text,
+    p_score: feedbackJson.overall_score,
+    p_feedback_json: feedbackJson,
+    p_completed: feedbackJson.overall_score >= 60,
+    p_xp_earned: xp_earned,
   })
 
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
-
-  // Add XP to session
-  if (xp_earned > 0) {
-    const { data: sess } = await supabase
-      .from('sessions')
-      .select('id, total_xp')
-      .eq('id', effectiveSessionId)
-      .single()
-    if (sess) {
-      await supabase
-        .from('sessions')
-        .update({ total_xp: sess.total_xp + xp_earned })
-        .eq('id', sess.id)
-    }
-  }
+  if (rpcError) return NextResponse.json({ error: rpcError.message }, { status: 500 })
 
   return NextResponse.json({ feedback: feedbackJson, xp_earned })
 }
