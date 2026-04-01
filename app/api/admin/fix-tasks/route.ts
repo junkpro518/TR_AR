@@ -18,7 +18,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'OPENROUTER_API_KEY not set' }, { status: 500 })
   }
 
-  const { data: tasks, error } = await supabase.from('tasks').select('id, title, scenario, type, cefr_level')
+  const { data: tasks, error } = await supabase.from('tasks').select('id, title, scenario, type, cefr_level') as {
+    data: { id: string; title: string; scenario: string | null; type: string; cefr_level: string }[] | null
+    error: { message: string } | null
+  }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!tasks?.length) return NextResponse.json({ message: 'No tasks found' })
 
